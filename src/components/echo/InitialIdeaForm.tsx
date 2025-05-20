@@ -28,10 +28,10 @@ export function InitialIdeaForm({ onStartSimulation, isLoading }: InitialIdeaFor
         <CardHeader>
           <div className="flex items-center gap-2 mb-2">
             <Lightbulb className="h-6 w-6 text-primary" />
-            <CardTitle className="text-xl">Start Your Evolving Echo</CardTitle>
+            <CardTitle className="text-xl">Start Your Brainstorm Session</CardTitle>
           </div>
           <CardDescription>
-            Enter your initial idea below. AI agents will then collaboratively refine and evolve it.
+            Enter your initial idea below. AI agents will then collaboratively refine and brainstorm on it.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -48,7 +48,7 @@ export function InitialIdeaForm({ onStartSimulation, isLoading }: InitialIdeaFor
         <CardFooter>
           <Button type="submit" className="w-full" disabled={!idea.trim() || isLoading}>
             <Play className="mr-2 h-4 w-4" />
-            {isLoading ? "Starting..." : "Start Evolving Idea"}
+            {isLoading ? "Starting..." : "Start Brainstorming"}
           </Button>
         </CardFooter>
       </form>

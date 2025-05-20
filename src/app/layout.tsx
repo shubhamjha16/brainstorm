@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Evolving Echo',
-  description: 'An AI app for collaborative idea evolution by Firebase Studio',
+  title: 'Brainstorm',
+  description: 'An AI app for collaborative idea evolution and brainstorming by Firebase Studio',
 };
 
 export default function RootLayout({

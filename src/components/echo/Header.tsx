@@ -7,9 +7,9 @@ export function Header() {
       <div className="container mx-auto flex items-center gap-3">
         <MessageCircleCode className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-2xl font-bold text-primary">Evolving Echo</h1>
+          <h1 className="text-2xl font-bold text-primary">Brainstorm</h1>
           <p className="text-sm text-muted-foreground">
-            Collaborative AI Idea Evolution
+            Collaborative AI Idea Evolution & Brainstorming
           </p>
         </div>
       </div>

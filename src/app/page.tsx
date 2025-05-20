@@ -307,7 +307,7 @@ export default function EvolvingEchoPage() {
               </Tabs>
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto border-t">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.6</p>
+              <p className="text-xs text-muted-foreground text-center">Brainstorm v1.6</p>
             </SidebarFooter>
           </Sidebar>
 
@@ -327,3 +327,5 @@ export default function EvolvingEchoPage() {
     </SidebarProvider>
   );
 }
+
+    

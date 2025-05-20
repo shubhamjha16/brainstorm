@@ -37,7 +37,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     if (!summary) return;
     setIsSaving(true);
     try {
-      localStorage.setItem("evolvingEchoSummary", JSON.stringify(summary));
+      localStorage.setItem("brainstormSummary", JSON.stringify(summary));
       toast({ title: "Saved!", description: "Summary saved to local storage." });
     } catch (error) {
       console.error("Failed to save summary:", error);
@@ -51,12 +51,12 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     if (!summary) return;
     setIsExporting(true);
     try {
-      const exportData = `Evolving Echo Summary:\n\n--- IDEA SUMMARY ---\n${summary.summary}\n\n--- KEY CONTRIBUTIONS ---\n${summary.keyContributions}`;
+      const exportData = `Brainstorm Summary:\n\n--- IDEA SUMMARY ---\n${summary.summary}\n\n--- KEY CONTRIBUTIONS ---\n${summary.keyContributions}`;
       const blob = new Blob([exportData], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "evolving_echo_summary.txt";
+      link.download = "brainstorm_summary.txt";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -78,7 +78,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     }
   };
 
-  if (isLoading && !summary) { 
+  if (isLoading && !summary) {
     return (
       <Card className="shadow-lg">
         <CardHeader>
@@ -92,7 +92,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     );
   }
 
-  if (!summary && !isLoading) { 
+  if (!summary && !isLoading) {
     return (
        <Card className="shadow-lg">
         <CardHeader>
@@ -106,7 +106,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
       </Card>
     );
   }
-  
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -124,7 +124,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
                 </AlertDialogTrigger>
                 <AlertDialogContent className="max-w-2xl">
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Evolved Idea Summary</AlertDialogTitle>
+                    <AlertDialogTitle>Brainstorm Summary</AlertDialogTitle>
                   </AlertDialogHeader>
                   <ScrollArea className="h-[60vh] max-h-[500px] p-1">
                     <AlertDialogDescription asChild>

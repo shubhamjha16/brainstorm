@@ -22,7 +22,7 @@ export function ImplementationPlan({ plan, isLoading }: ImplementationPlanProps)
     if (!plan) return;
     setIsExporting(true);
     try {
-      let exportData = `Evolving Echo - Implementation Plan:\n\n`;
+      let exportData = `Brainstorm - Implementation Plan:\n\n`;
       exportData += `--- TIMEFRAME ---\n${plan.timeframe}\n\n`;
       exportData += `--- PROJECT PHASES FLOWCHART ---\n${plan.projectPhasesFlowchart}\n\n`;
       exportData += `--- COST ESTIMATION FLOWCHART ---\n${plan.costEstimationFlowchart}\n\n`;
@@ -34,7 +34,7 @@ export function ImplementationPlan({ plan, isLoading }: ImplementationPlanProps)
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "evolving_echo_implementation_plan.txt";
+      link.download = "brainstorm_implementation_plan.txt";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -126,3 +126,5 @@ const SectionCard: React.FC<SectionCardProps> = ({ icon: Icon, title, content })
     </CardContent>
   </Card>
 );
+
+    

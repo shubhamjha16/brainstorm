@@ -22,7 +22,7 @@ export type GenerateImplementationPlanInput = z.infer<typeof GenerateImplementat
 const GenerateImplementationPlanOutputSchema = z.object({
   timeframe: z.string().describe('A detailed timeframe outlining project phases (e.g., Research: 2 weeks, Design: 3 weeks).'),
   projectPhasesFlowchart: z.string().describe('A text-based flowchart outlining project phases like research, design, development, testing, and deployment. Use simple text and indentation to represent the flow.'),
-  costEstimationFlowchart: z.string().describe('A text-based flowchart estimating expenses for AI API usage, cloud services, development tools, and other resources. Use simple text and indentation.'),
+  costEstimationFlowchart: z.string().describe('A text-based flowchart estimating expenses for AI API usage, cloud services, development tools, and other resources. Use simple text and indentation. Provide indicative numerical estimates instead of variables like $X or $Y.'),
   resourceAllocation: z.string().describe('A text-based flowchart detailing how key team roles are allocated across project phases, indicating their primary responsibilities or involvement per phase.'),
   feasibilityAssessment: z.string().describe('A feasibility check evaluating technical, business, and operational viability of the project.'),
   refinedStrategy: z.string().describe('A refined, actionable strategy based on the feasibility and planning, which can be used to guide the project or restart the development cycle with improvements.'),
@@ -44,7 +44,7 @@ Based on the following summarized idea, generate a comprehensive implementation 
 Summarized Idea:
 "{{{summarizedIdea}}}"
 
-Please provide the following sections for the implementation plan. Each flowchart should be distinct:
+Please provide the following sections for the implementation plan. Each flowchart should be distinct. Provide indicative numerical estimates for costs rather than variables like $X or $Y.
 
 1.  **Timeframe**: A detailed timeframe for project phases (e.g., Research & Discovery: 2 weeks, Prototyping: 3 weeks, MVP Development: 8 weeks, Testing & QA: 3 weeks, Deployment & Launch: 1 week, Post-launch Monitoring: ongoing). Be specific.
 
@@ -71,21 +71,21 @@ Please provide the following sections for the implementation plan. Each flowchar
       -----> Production Release (Phased rollout if applicable)
       -----> Post-launch Monitoring & Hotfixes
 
-3.  **Cost Estimation (Text-based Flowchart)**: Create a separate text-based flowchart estimating potential costs. Categorize expenses such as AI API Usage (per provider if applicable, estimate token/usage costs), Cloud Services (hosting, database, serverless functions), Development Tools/Software Subscriptions, Team Salaries/Contractor Fees (if relevant to project scale, consider duration from timeframe), and Marketing/Launch budget.
+3.  **Cost Estimation (Text-based Flowchart)**: Create a separate text-based flowchart estimating potential costs. Categorize expenses such as AI API Usage (per provider if applicable, estimate token/usage costs), Cloud Services (hosting, database, serverless functions), Development Tools/Software Subscriptions, Team Salaries/Contractor Fees (if relevant to project scale, consider duration from timeframe), and Marketing/Launch budget. Use indicative numerical estimates.
     Example:
     Estimated Costs
       -> AI API Usage
-        - OpenAI GPT-4 (Refinement): $X/month (based on estimated refinement cycles & token usage)
-        - Google Gemini (Summarization/Planning): $Y/month
+        - OpenAI GPT-4 (Refinement): ~$50-150/month (based on estimated refinement cycles & token usage)
+        - Google Gemini (Summarization/Planning): ~$30-100/month
       -> Cloud Services
-        - Hosting (e.g., Next.js on Vercel/Firebase): $A/month
-        - Database (e.g., Firestore): $B/month
+        - Hosting (e.g., Next.js on Vercel/Firebase): ~$20-50/month
+        - Database (e.g., Firestore): ~$25-75/month (depending on usage)
       -> Development Resources (Example: for a 3-month MVP)
-        - 1 AI Engineer (Part-time for model flow): $C_total
-        - 1 Full-stack Developer (Full-time): $D_total
+        - 1 AI Engineer (Part-time for model flow): ~$3,000-6,000_total
+        - 1 Full-stack Developer (Full-time): ~$15,000-25,000_total
       -> Other
-        - Domain & SSL: $F/year
-        - Contingency (15-20% of total): $E
+        - Domain & SSL: ~$15-50/year
+        - Contingency (15-20% of total): ~$3,000-7,000
 
 4.  **Resource Allocation (Text-based Flowchart)**: Create a separate text-based flowchart detailing how key team roles (e.g., Project Manager, AI Engineer, Frontend Developer, Backend Developer, UX/UI Designer, QA Tester, DevOps Engineer) are allocated across the project phases identified in section 2. Indicate primary responsibilities or key involvement per phase for each role.
     Example:

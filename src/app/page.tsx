@@ -2,14 +2,16 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import type { Agent, ChatMessageData, SummaryData } from "@/types";
+import type { Agent, ChatMessageData, SummaryData, ImplementationPlanData } from "@/types";
 import { Header } from "@/components/echo/Header";
 import { InitialIdeaForm } from "@/components/echo/InitialIdeaForm";
 import { ChatInterface } from "@/components/echo/ChatInterface";
 import { Controls } from "@/components/echo/Controls";
 import { OutputActions } from "@/components/echo/OutputActions";
+import { ImplementationPlan } from "@/components/echo/ImplementationPlan"; // New component
 import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
-import { refineIdea } from "@/ai/flows/refine-idea-flow"; // Import the new flow
+import { refineIdea } from "@/ai/flows/refine-idea-flow";
+import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan"; // New flow
 import { useToast } from "@/hooks/use-toast";
 import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, Loader2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
@@ -23,7 +25,7 @@ const AI_AGENTS: Agent[] = [
   { id: "jurassic", name: "Jurassic", provider: "AI21 Labs", role: "The Historian", avatarColor: "bg-orange-500", icon: Brain },
 ];
 
-const SIMULATION_DELAY_MS = 1500; // Delay between AI agent messages, reduced for quicker flow with real AI calls
+const SIMULATION_DELAY_MS = 1500; 
 
 export default function EvolvingEchoPage() {
   const [initialIdea, setInitialIdea] = useState<string | null>(null);
@@ -32,9 +34,11 @@ export default function EvolvingEchoPage() {
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simulationHasStarted, setSimulationHasStarted] = useState<boolean>(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
+  const [implementationPlan, setImplementationPlan] = useState<ImplementationPlanData | null>(null);
   const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false); 
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [isLoadingAgentResponse, setIsLoadingAgentResponse] = useState<boolean>(false);
+  const [isLoadingImplementationPlan, setIsLoadingImplementationPlan] = useState<boolean>(false);
   
   const currentAgentIndexRef = useRef<number>(0);
   const simulationLoopRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,7 +47,6 @@ export default function EvolvingEchoPage() {
 
   const addMessage = useCallback((text: string, sender: 'User' | Agent['name'] | 'System', agent?: Agent, isVoiceInput: boolean = false, isLoading: boolean = false) => {
     setMessages((prevMessages) => {
-      // If the last message was a loading message from the same agent, replace it
       if (isLoading && prevMessages.length > 0) {
         const lastMessage = prevMessages[prevMessages.length - 1];
         if (lastMessage.isLoading && lastMessage.sender === sender) {
@@ -58,12 +61,11 @@ export default function EvolvingEchoPage() {
               isUser: sender === 'User',
               agent,
               isVoiceInput,
-              isLoading: false, // The actual message is not a loading message
+              isLoading: false, 
             },
           ];
         }
       }
-      // If it's a new loading message or a regular message
       return [
         ...prevMessages,
         {
@@ -81,16 +83,17 @@ export default function EvolvingEchoPage() {
   }, []);
 
   const handleStartSimulation = (idea: string) => {
-    setIsStartingSimulation(true); // Keep this for initial idea submission if needed for other UI elements
+    setIsStartingSimulation(true);
     setInitialIdea(idea);
     setCurrentIdea(idea);
-    setMessages([]); // Clear previous messages
+    setMessages([]); 
     addMessage(idea, "User");
     setIsSimulating(true);
     setSimulationHasStarted(true);
     setSummary(null);
+    setImplementationPlan(null); // Reset implementation plan
     currentAgentIndexRef.current = 0;
-    setIsStartingSimulation(false); // Reset after setup
+    setIsStartingSimulation(false);
   };
 
   const handleStopSimulation = useCallback(async () => {
@@ -103,6 +106,7 @@ export default function EvolvingEchoPage() {
       return;
     }
     setIsLoadingSummary(true);
+    setImplementationPlan(null); // Clear previous plan when generating new summary
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
@@ -117,41 +121,37 @@ export default function EvolvingEchoPage() {
     }
   }, [messages, toast, initialIdea]);
 
-
   const processAgentTurn = useCallback(async () => {
     if (!isSimulating || isLoadingAgentResponse) return;
 
     const agent = AI_AGENTS[currentAgentIndexRef.current];
     setIsLoadingAgentResponse(true);
-    addMessage(`${agent.name} is thinking...`, agent.name, agent, false, true); // Add loading message
+    addMessage(`${agent.name} is thinking...`, agent.name, agent, false, true); 
 
     try {
       const { refinedIdea } = await refineIdea({ currentIdea, agentName: agent.name, agentRole: agent.role });
-      addMessage(refinedIdea, agent.name, agent); // Replace loading message with actual response
+      addMessage(refinedIdea, agent.name, agent); 
       setCurrentIdea(refinedIdea);
     } catch (error) {
       console.error(`Error with ${agent.name}:`, error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       addMessage(`Sorry, I encountered an issue: ${errorMessage}`, agent.name, agent);
       toast({ title: `Error with ${agent.name}`, description: `Could not get refinement: ${errorMessage}`, variant: "destructive" });
-      // Optionally, keep currentIdea as is, or revert to a previous state
     } finally {
       setIsLoadingAgentResponse(false);
     }
 
     currentAgentIndexRef.current = (currentAgentIndexRef.current + 1) % AI_AGENTS.length;
     
-    if (isSimulating) { // Check isSimulating again in case it was stopped during the async call
+    if (isSimulating) { 
       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS);
     }
 
   }, [isSimulating, currentIdea, addMessage, toast, isLoadingAgentResponse]);
 
-
   useEffect(() => {
     if (isSimulating && simulationHasStarted && initialIdea && !isLoadingAgentResponse) {
       if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current); 
-      // Start the first agent turn or continue simulation
       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); 
     } else if (!isSimulating && simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
@@ -162,7 +162,6 @@ export default function EvolvingEchoPage() {
       }
     };
   }, [isSimulating, simulationHasStarted, initialIdea, processAgentTurn, isLoadingAgentResponse]);
-
 
   const handleTranscription = (text: string) => {
     if (!isSimulating || isLoadingAgentResponse) return; 
@@ -178,6 +177,27 @@ export default function EvolvingEchoPage() {
        simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); 
     }
   };
+
+  const handleGenerateImplementationPlan = useCallback(async (summarizedIdea: string) => {
+    if (!summarizedIdea) {
+      toast({ title: "Error", description: "Cannot generate plan without a summarized idea.", variant: "destructive"});
+      return;
+    }
+    setIsLoadingImplementationPlan(true);
+    setImplementationPlan(null);
+    try {
+      const plan = await generateImplementationPlan({ summarizedIdea });
+      setImplementationPlan(plan);
+      toast({ title: "Implementation Plan Generated", description: "The detailed plan is now available."});
+    } catch (error) {
+      console.error("Implementation plan generation error:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Plan Generation Error", description: `Could not generate implementation plan: ${errorMessage}`, variant: "destructive" });
+      setImplementationPlan(null); // Ensure plan is null on error
+    } finally {
+      setIsLoadingImplementationPlan(false);
+    }
+  }, [toast]);
 
 
   return (
@@ -200,10 +220,16 @@ export default function EvolvingEchoPage() {
                   onTranscription={handleTranscription}
                 />
               )}
-              <OutputActions summary={summary} isLoading={isLoadingSummary && !summary} />
+              <OutputActions 
+                summary={summary} 
+                isLoading={isLoadingSummary && !summary} 
+                onGeneratePlan={handleGenerateImplementationPlan}
+                isGeneratingPlan={isLoadingImplementationPlan}
+              />
+              <ImplementationPlan plan={implementationPlan} isLoading={isLoadingImplementationPlan} />
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.1</p>
+              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.2</p>
             </SidebarFooter>
           </Sidebar>
 

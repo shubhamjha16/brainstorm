@@ -3,7 +3,7 @@
 
 import type { SummaryData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Save, Loader2 } from "lucide-react";
+import { Download, FileText, Save, Loader2, Zap } from "lucide-react"; // Added Zap for Generate Plan
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -22,10 +22,12 @@ import React from "react";
 
 interface OutputActionsProps {
   summary: SummaryData | null;
-  isLoading: boolean;
+  isLoading: boolean; // For summary loading
+  onGeneratePlan: (summarizedIdea: string) => void;
+  isGeneratingPlan: boolean;
 }
 
-export function OutputActions({ summary, isLoading }: OutputActionsProps) {
+export function OutputActions({ summary, isLoading, onGeneratePlan, isGeneratingPlan }: OutputActionsProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -67,7 +69,15 @@ export function OutputActions({ summary, isLoading }: OutputActionsProps) {
     }
   };
 
-  if (isLoading) {
+  const handleGeneratePlanClick = () => {
+    if (summary?.summary) {
+      onGeneratePlan(summary.summary);
+    } else {
+      toast({ title: "Cannot Generate Plan", description: "A summary must exist before generating an implementation plan.", variant: "destructive" });
+    }
+  };
+
+  if (isLoading) { // isLoading refers to summary loading
     return (
       <Card className="shadow-lg">
         <CardHeader>
@@ -100,7 +110,7 @@ export function OutputActions({ summary, isLoading }: OutputActionsProps) {
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-lg">Final Evolved Idea</CardTitle>
-        <CardDescription>Review, save, or export the summarized discussion.</CardDescription>
+        <CardDescription>Review, save, or export the summarized discussion. Then, generate an implementation plan.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
           <AlertDialog>
@@ -133,17 +143,19 @@ export function OutputActions({ summary, isLoading }: OutputActionsProps) {
             </AlertDialogContent>
           </AlertDialog>
 
-        <Button onClick={handleSave} className="w-full" disabled={isSaving}>
+        <Button onClick={handleSave} className="w-full" disabled={isSaving || isGeneratingPlan}>
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           {isSaving ? "Saving..." : "Save Summary"}
         </Button>
-        <Button onClick={handleExport} className="w-full" disabled={isExporting}>
+        <Button onClick={handleExport} className="w-full" disabled={isExporting || isGeneratingPlan}>
           {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           {isExporting ? "Exporting..." : "Export Summary"}
+        </Button>
+        <Button onClick={handleGeneratePlanClick} className="w-full" variant="secondary" disabled={!summary || isGeneratingPlan}>
+          {isGeneratingPlan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+          {isGeneratingPlan ? "Generating Plan..." : "Generate Implementation Plan"}
         </Button>
       </CardContent>
     </Card>
   );
 }
-
-    

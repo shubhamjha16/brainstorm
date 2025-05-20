@@ -23,3 +23,12 @@ export interface SummaryData {
   summary: string;
   keyContributions: string;
 }
+
+export interface ImplementationPlanData {
+  timeframe: string;
+  projectPhasesFlowchart: string;
+  costEstimationFlowchart: string;
+  resourceAllocation: string;
+  feasibilityAssessment: string;
+  refinedStrategy: string;
+}

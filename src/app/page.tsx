@@ -13,8 +13,8 @@ import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
 import { refineIdea } from "@/ai/flows/refine-idea-flow";
 import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter } from "@/components/ui/sidebar";
+import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, Menu } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarRail, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AI_AGENTS: Agent[] = [
@@ -221,18 +221,10 @@ export default function EvolvingEchoPage() {
     setCurrentIdea(text);
     isNextTurnVoiceSteeredRef.current = true; // Mark that the next agent turn is voice-steered
 
-    // If paused, unpause. The useEffect will then pick up the simulation.
-    // If already simulating, the change in currentIdea and the flags will be picked up by useEffect to schedule the next turn.
     if (isPaused) {
       setIsPaused(false); 
     } else if (isSimulating) {
-       // To make it more immediate after voice input when already simulating and not paused:
-       // We can clear the existing timeout and schedule an immediate (or quicker) turn.
-       // However, the current structure with useEffect dependencies should handle this.
-       // For more explicit immediate processing:
-       // clearTimeout(simulationLoopRef.current); // Clear existing
-       // processAgentTurn(); // Call directly, or schedule with a shorter delay
-       // For now, let useEffect handle it to maintain consistency
+       // Handled by useEffect
     }
   };
 
@@ -265,16 +257,18 @@ export default function EvolvingEchoPage() {
         <Header />
         <div className="flex flex-1 overflow-hidden">
           <Sidebar side="right" variant="sidebar" collapsible="icon" className="border-l">
-            <SidebarHeader className="p-4">
-               <h2 className="text-xl font-semibold text-primary">Tools</h2>
+            <SidebarRail />
+            <SidebarHeader className="p-4 flex items-center justify-between group-data-[state=collapsed]:group-data-[collapsible=icon]:p-2 group-data-[state=collapsed]:group-data-[collapsible=icon]:justify-center">
+               <h2 className="text-xl font-semibold text-primary group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">Tools</h2>
+               <Menu className="h-5 w-5 text-primary hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block" />
             </SidebarHeader>
             <SidebarContent className="p-0">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-                <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10">
+                <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                   <TabsTrigger value="controlsOutput">Controls &amp; Summary</TabsTrigger>
                   <TabsTrigger value="plan" disabled={!implementationPlan && !isLoadingImplementationPlan && !summary}>Plan</TabsTrigger>
                 </TabsList>
-                <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6">
+                <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                   {simulationHasStarted && (
                     <Controls
                       isSimulating={isSimulating}
@@ -298,7 +292,7 @@ export default function EvolvingEchoPage() {
                     planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
                   />
                 </TabsContent>
-                <TabsContent value="plan" className="flex-1 overflow-y-auto p-4">
+                <TabsContent value="plan" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                   <ImplementationPlan
                     plan={implementationPlan}
                     isLoading={isLoadingImplementationPlan && !implementationPlan}
@@ -306,8 +300,11 @@ export default function EvolvingEchoPage() {
                 </TabsContent>
               </Tabs>
             </SidebarContent>
-            <SidebarFooter className="p-4 mt-auto border-t">
+            <SidebarFooter className="p-4 mt-auto border-t group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
               <p className="text-xs text-muted-foreground text-center">Brainstorm v1.6</p>
+            </SidebarFooter>
+             <SidebarFooter className="p-2 mt-auto border-t hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block">
+              <p className="text-xs text-muted-foreground text-center">v1.6</p>
             </SidebarFooter>
           </Sidebar>
 
@@ -327,5 +324,3 @@ export default function EvolvingEchoPage() {
     </SidebarProvider>
   );
 }
-
-    

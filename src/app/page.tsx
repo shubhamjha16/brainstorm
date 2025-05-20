@@ -58,7 +58,7 @@ function EvolvingEchoPageContent() {
   const isNextTurnVoiceSteeredRef = useRef<boolean>(false);
 
   const { toast } = useToast();
-  const { open: sidebarOpen, toggleSidebar, state: sidebarState } = useSidebar();
+  const { open: sidebarOpen, toggleSidebar, state: sidebarState, isMobile } = useSidebar();
 
   const addMessage = useCallback((text: string, sender: 'User' | Agent['name'] | 'System', agent?: Agent, isVoiceInput: boolean = false, isLoading: boolean = false) => {
     setMessages((prevMessages) => {
@@ -108,7 +108,7 @@ function EvolvingEchoPageContent() {
     setIsPaused(false);
     setSummary(null);
     setImplementationPlan(null);
-    setMarketingPost(null); 
+    setMarketingPost(null);
     currentAgentIndexRef.current = 0;
     isNextTurnVoiceSteeredRef.current = false;
     setIsStartingSimulation(false);
@@ -150,7 +150,7 @@ function EvolvingEchoPageContent() {
       return;
     }
     setIsLoadingSummary(true);
-    setImplementationPlan(null); 
+    setImplementationPlan(null);
     setMarketingPost(null);
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
@@ -225,7 +225,7 @@ function EvolvingEchoPageContent() {
       return;
     }
 
-    if (simulationLoopRef.current) { 
+    if (simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
 
@@ -234,7 +234,7 @@ function EvolvingEchoPageContent() {
     isNextTurnVoiceSteeredRef.current = true;
 
     if (isPaused) {
-      setIsPaused(false); 
+      setIsPaused(false);
     }
   };
 
@@ -268,19 +268,20 @@ function EvolvingEchoPageContent() {
           <SidebarHeader className="p-4 flex items-center justify-between group-data-[state=collapsed]:group-data-[collapsible=icon]:p-2 group-data-[state=collapsed]:group-data-[collapsible=icon]:justify-center">
              <h2 className={cn(
                 "text-xl font-semibold text-primary",
-                sidebarState === 'collapsed' && sidebarOpen === false && 'hidden', 
-                'group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden' 
+                sidebarState === 'collapsed' && 'group-data-[collapsible=icon]:hidden'
              )}>
                Tools
              </h2>
-             <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleSidebar}
-             >
-                {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
-                <span className="sr-only">Toggle Sidebar</span>
-            </Button>
+             {!isMobile && (
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleSidebar}
+                 >
+                    {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+                    <span className="sr-only">Toggle Sidebar</span>
+                </Button>
+             )}
           </SidebarHeader>
           <SidebarContent className="p-0 flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
@@ -289,7 +290,7 @@ function EvolvingEchoPageContent() {
                 <TabsTrigger value="plan" disabled={!implementationPlan && !isLoadingImplementationPlan && !summary}>Plan</TabsTrigger>
                 <TabsTrigger value="marketing" disabled={!summary}>Marketing</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                 {simulationHasStarted && (
                   <Controls
@@ -314,7 +315,7 @@ function EvolvingEchoPageContent() {
                   planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
                 />
               </TabsContent>
-              
+
               <TabsContent value="plan" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                 <ImplementationPlan
                   plan={implementationPlan}
@@ -328,7 +329,7 @@ function EvolvingEchoPageContent() {
             </Tabs>
           </SidebarContent>
           <SidebarFooter className="p-4 mt-auto border-t group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.8</p> 
+            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.8</p>
           </SidebarFooter>
            <SidebarFooter className="p-2 mt-auto border-t hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block">
             <p className="text-xs text-muted-foreground text-center">v1.8</p>
@@ -367,7 +368,7 @@ function EvolvingEchoPageContent() {
                         width={500}
                         height={500}
                         className="object-cover w-full h-full"
-                        priority={true} 
+                        priority={true}
                       />
                     </div>
                     <p className="text-sm text-muted-foreground mt-1 text-center">Image Focus: {marketingPost.imageKeywords}</p>
@@ -398,3 +399,4 @@ export default function EvolvingEchoPage() {
   );
 }
 
+    

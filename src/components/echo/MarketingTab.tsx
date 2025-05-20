@@ -24,7 +24,8 @@ export function MarketingTab({ summary, onPostGenerated }: MarketingTabProps) {
 
   useEffect(() => {
     if (summary?.summary && !marketingAngle) {
-      setMarketingAngle(summary.summary.substring(0, 250)); 
+      // Use the full summary, the textarea's maxLength will handle the 1000 char limit
+      setMarketingAngle(summary.summary); 
     }
   }, [summary, marketingAngle]);
 

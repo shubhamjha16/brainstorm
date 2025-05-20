@@ -46,6 +46,7 @@ export default function EvolvingEchoPage() {
 
   const currentAgentIndexRef = useRef<number>(0);
   const simulationLoopRef = useRef<NodeJS.Timeout | null>(null);
+  const isNextTurnVoiceSteeredRef = useRef<boolean>(false);
 
   const { toast } = useToast();
 
@@ -98,6 +99,7 @@ export default function EvolvingEchoPage() {
     setSummary(null);
     setImplementationPlan(null);
     currentAgentIndexRef.current = 0;
+    isNextTurnVoiceSteeredRef.current = false;
     setIsStartingSimulation(false);
     setActiveTab("controlsOutput");
   };
@@ -159,8 +161,13 @@ export default function EvolvingEchoPage() {
     setIsLoadingAgentResponse(true);
     addMessage(`${agent.name} is thinking...`, agent.name, agent, false, true);
 
+    const isUserDirected = isNextTurnVoiceSteeredRef.current;
+    if (isUserDirected) {
+      isNextTurnVoiceSteeredRef.current = false; // Reset for subsequent turns
+    }
+
     try {
-      const { refinedIdea } = await refineIdea({ currentIdea, agentName: agent.name, agentRole: agent.role });
+      const { refinedIdea } = await refineIdea({ currentIdea, agentName: agent.name, agentRole: agent.role, isUserDirected });
       addMessage(refinedIdea, agent.name, agent);
       setCurrentIdea(refinedIdea);
     } catch (error) {
@@ -174,7 +181,6 @@ export default function EvolvingEchoPage() {
 
     currentAgentIndexRef.current = (currentAgentIndexRef.current + 1) % AI_AGENTS.length;
 
-    // The useEffect will schedule the next turn if conditions are still met
   }, [isSimulating, currentIdea, addMessage, toast, isLoadingAgentResponse, isPaused, isLoadingSummary, isLoadingSummaryForContinue]);
 
   useEffect(() => {
@@ -182,7 +188,7 @@ export default function EvolvingEchoPage() {
         !isLoadingAgentResponse && !isPaused && !isLoadingSummary && !isLoadingSummaryForContinue
     ) {
       if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current);
-      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS); // Use full delay
+      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS);
     } else if (simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
@@ -207,23 +213,27 @@ export default function EvolvingEchoPage() {
       return;
     }
 
-    if (simulationLoopRef.current) { // Clear any pending agent turn
+    if (simulationLoopRef.current) { 
       clearTimeout(simulationLoopRef.current);
     }
 
     addMessage(`Voice Input: ${text}`, "User", undefined, true);
     setCurrentIdea(text);
+    isNextTurnVoiceSteeredRef.current = true; // Mark that the next agent turn is voice-steered
 
+    // If paused, unpause. The useEffect will then pick up the simulation.
+    // If already simulating, the change in currentIdea and the flags will be picked up by useEffect to schedule the next turn.
     if (isPaused) {
-      setIsPaused(false); // Unpausing will trigger useEffect to reschedule processAgentTurn
+      setIsPaused(false); 
     } else if (isSimulating) {
-      // If simulating, also trigger rescheduling via useEffect by virtue of dependencies changing (or just let it run its course)
-      // To make it more immediate, we can call processAgentTurn directly or rely on useEffect.
-      // For consistency, let useEffect handle it. The currentIdea has changed.
-      // If an immediate turn is desired:
-      // simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2);
+       // To make it more immediate after voice input when already simulating and not paused:
+       // We can clear the existing timeout and schedule an immediate (or quicker) turn.
+       // However, the current structure with useEffect dependencies should handle this.
+       // For more explicit immediate processing:
+       // clearTimeout(simulationLoopRef.current); // Clear existing
+       // processAgentTurn(); // Call directly, or schedule with a shorter delay
+       // For now, let useEffect handle it to maintain consistency
     }
-    // If !isSimulating (i.e. fully stopped), currentIdea is updated for next manual start.
   };
 
   const handleGenerateImplementationPlan = useCallback(async (summarizedIdea: string) => {
@@ -297,7 +307,7 @@ export default function EvolvingEchoPage() {
               </Tabs>
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto border-t">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.5</p>
+              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.6</p>
             </SidebarFooter>
           </Sidebar>
 
@@ -317,5 +327,3 @@ export default function EvolvingEchoPage() {
     </SidebarProvider>
   );
 }
-
-    

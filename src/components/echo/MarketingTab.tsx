@@ -79,9 +79,9 @@ export function MarketingTab({ summary, onPostGenerated }: MarketingTabProps) {
             onChange={(e) => setMarketingAngle(e.target.value)}
             rows={4}
             disabled={isLoading}
-            maxLength={300}
+            maxLength={1000}
           />
-           <p className="text-xs text-muted-foreground mt-1">{marketingAngle.length}/300 characters</p>
+           <p className="text-xs text-muted-foreground mt-1">{marketingAngle.length}/1000 characters</p>
         </div>
 
         <Button onClick={handleGeneratePost} disabled={isLoading || !marketingAngle.trim()} className="w-full">

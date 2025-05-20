@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { ChatMessageData } from "@/types";
@@ -36,3 +37,5 @@ export function ChatInterface({ messages }: ChatInterfaceProps) {
     </ScrollArea>
   );
 }
+
+    

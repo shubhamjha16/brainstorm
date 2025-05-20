@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Agent } from "@/types";
@@ -25,3 +26,5 @@ export function AgentAvatar({ agent, className }: AgentAvatarProps) {
     </Avatar>
   );
 }
+
+    

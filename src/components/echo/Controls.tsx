@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -38,3 +39,5 @@ export function Controls({ isSimulating, isLoadingSummary, onStopSimulation, onT
     </Card>
   );
 }
+
+    

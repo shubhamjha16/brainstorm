@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -119,3 +120,5 @@ export function VoiceInput({ onTranscription, isSimulating, disabled }: VoiceInp
     </div>
   );
 }
+
+    

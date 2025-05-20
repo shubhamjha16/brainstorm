@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { SummaryData } from "@/types";
@@ -144,3 +145,5 @@ export function OutputActions({ summary, isLoading }: OutputActionsProps) {
     </Card>
   );
 }
+
+    

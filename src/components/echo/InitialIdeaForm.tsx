@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -54,3 +55,5 @@ export function InitialIdeaForm({ onStartSimulation, isLoading }: InitialIdeaFor
     </Card>
   );
 }
+
+    

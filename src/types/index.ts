@@ -1,3 +1,4 @@
+
 export interface Agent {
   id: string;
   name: string;
@@ -21,3 +22,5 @@ export interface SummaryData {
   summary: string;
   keyContributions: string;
 }
+
+    

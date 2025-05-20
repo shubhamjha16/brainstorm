@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
@@ -82,7 +83,7 @@ export default function EvolvingEchoPage() {
     } finally {
       setIsLoadingSummary(false);
     }
-  }, [messages, toast, addMessage]);
+  }, [messages, toast]);
 
 
   const processAgentTurn = useCallback(async () => {
@@ -180,3 +181,5 @@ export default function EvolvingEchoPage() {
     </SidebarProvider>
   );
 }
+
+    

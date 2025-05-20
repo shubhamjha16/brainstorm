@@ -9,11 +9,10 @@ import { ChatInterface } from "@/components/echo/ChatInterface";
 import { Controls } from "@/components/echo/Controls";
 import { OutputActions } from "@/components/echo/OutputActions";
 import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
+import { refineIdea } from "@/ai/flows/refine-idea-flow"; // Import the new flow
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale } from "lucide-react";
+import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, Loader2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 const AI_AGENTS: Agent[] = [
   { id: "gpt4", name: "GPT-4", provider: "OpenAI", role: "The Pragmatist", avatarColor: "bg-green-500", icon: Bot },
@@ -24,7 +23,7 @@ const AI_AGENTS: Agent[] = [
   { id: "jurassic", name: "Jurassic", provider: "AI21 Labs", role: "The Historian", avatarColor: "bg-orange-500", icon: Brain },
 ];
 
-const SIMULATION_DELAY_MS = 3000; // Delay between AI agent messages
+const SIMULATION_DELAY_MS = 1500; // Delay between AI agent messages, reduced for quicker flow with real AI calls
 
 export default function EvolvingEchoPage() {
   const [initialIdea, setInitialIdea] = useState<string | null>(null);
@@ -33,37 +32,65 @@ export default function EvolvingEchoPage() {
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
   const [simulationHasStarted, setSimulationHasStarted] = useState<boolean>(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false); // General loading for AI calls
+  const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false); 
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
+  const [isLoadingAgentResponse, setIsLoadingAgentResponse] = useState<boolean>(false);
   
   const currentAgentIndexRef = useRef<number>(0);
   const simulationLoopRef = useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
 
-  const addMessage = useCallback((text: string, sender: 'User' | Agent['name'], agent?: Agent, isVoiceInput: boolean = false) => {
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        id: Date.now().toString() + Math.random().toString(),
-        sender,
-        text,
-        timestamp: new Date(),
-        isUser: sender === 'User',
-        agent,
-        isVoiceInput,
-      },
-    ]);
+  const addMessage = useCallback((text: string, sender: 'User' | Agent['name'] | 'System', agent?: Agent, isVoiceInput: boolean = false, isLoading: boolean = false) => {
+    setMessages((prevMessages) => {
+      // If the last message was a loading message from the same agent, replace it
+      if (isLoading && prevMessages.length > 0) {
+        const lastMessage = prevMessages[prevMessages.length - 1];
+        if (lastMessage.isLoading && lastMessage.sender === sender) {
+          const updatedMessages = [...prevMessages.slice(0, -1)];
+          return [
+            ...updatedMessages,
+            {
+              id: Date.now().toString() + Math.random().toString(),
+              sender,
+              text,
+              timestamp: new Date(),
+              isUser: sender === 'User',
+              agent,
+              isVoiceInput,
+              isLoading: false, // The actual message is not a loading message
+            },
+          ];
+        }
+      }
+      // If it's a new loading message or a regular message
+      return [
+        ...prevMessages,
+        {
+          id: Date.now().toString() + Math.random().toString(),
+          sender,
+          text,
+          timestamp: new Date(),
+          isUser: sender === 'User',
+          agent,
+          isVoiceInput,
+          isLoading,
+        },
+      ];
+    });
   }, []);
 
   const handleStartSimulation = (idea: string) => {
+    setIsStartingSimulation(true); // Keep this for initial idea submission if needed for other UI elements
     setInitialIdea(idea);
     setCurrentIdea(idea);
+    setMessages([]); // Clear previous messages
     addMessage(idea, "User");
     setIsSimulating(true);
     setSimulationHasStarted(true);
     setSummary(null);
     currentAgentIndexRef.current = 0;
+    setIsStartingSimulation(false); // Reset after setup
   };
 
   const handleStopSimulation = useCallback(async () => {
@@ -71,46 +98,61 @@ export default function EvolvingEchoPage() {
     if (simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
+    if (messages.length === 0 || !initialIdea) {
+      toast({ title: "Nothing to Summarize", description: "Start a simulation first.", variant: "default" });
+      return;
+    }
     setIsLoadingSummary(true);
     try {
-      const discussionText = messages.map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
+      const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
       setSummary(result);
       toast({ title: "Simulation Stopped", description: "Summary has been generated." });
     } catch (error) {
       console.error("Summarization error:", error);
       toast({ title: "Summarization Error", description: "Could not generate summary.", variant: "destructive" });
+      setSummary({summary: "Error generating summary.", keyContributions: "Could not process contributions."});
     } finally {
       setIsLoadingSummary(false);
     }
-  }, [messages, toast]);
+  }, [messages, toast, initialIdea]);
 
 
   const processAgentTurn = useCallback(async () => {
-    if (!isSimulating) return;
+    if (!isSimulating || isLoadingAgentResponse) return;
 
     const agent = AI_AGENTS[currentAgentIndexRef.current];
-    
-    // Mock AI "thinking" and response
-    // In a real scenario, this would call an AI model
-    const refinedText = `As ${agent.name} (${agent.role}), I've considered the idea: "${currentIdea}". My refinement is to focus on integrating ${agent.role.toLowerCase().replace('the ', '')} aspects more deeply. For example, we could explore... [${agent.name} adds novel perspective based on its role].`;
-    
-    addMessage(refinedText, agent.name, agent);
-    setCurrentIdea(refinedText); // Idea evolves with each agent's input
+    setIsLoadingAgentResponse(true);
+    addMessage(`${agent.name} is thinking...`, agent.name, agent, false, true); // Add loading message
+
+    try {
+      const { refinedIdea } = await refineIdea({ currentIdea, agentName: agent.name, agentRole: agent.role });
+      addMessage(refinedIdea, agent.name, agent); // Replace loading message with actual response
+      setCurrentIdea(refinedIdea);
+    } catch (error) {
+      console.error(`Error with ${agent.name}:`, error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      addMessage(`Sorry, I encountered an issue: ${errorMessage}`, agent.name, agent);
+      toast({ title: `Error with ${agent.name}`, description: `Could not get refinement: ${errorMessage}`, variant: "destructive" });
+      // Optionally, keep currentIdea as is, or revert to a previous state
+    } finally {
+      setIsLoadingAgentResponse(false);
+    }
 
     currentAgentIndexRef.current = (currentAgentIndexRef.current + 1) % AI_AGENTS.length;
     
-    // Continue the loop
-    simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS);
+    if (isSimulating) { // Check isSimulating again in case it was stopped during the async call
+      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS);
+    }
 
-  }, [isSimulating, currentIdea, addMessage]);
+  }, [isSimulating, currentIdea, addMessage, toast, isLoadingAgentResponse]);
 
 
   useEffect(() => {
-    if (isSimulating && simulationHasStarted && initialIdea) {
-       // Start the first agent turn if simulation is on and hasn't been paused by voice input processing.
-      if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current); // Clear previous timeout if any
-      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); // Start quicker for first turn
+    if (isSimulating && simulationHasStarted && initialIdea && !isLoadingAgentResponse) {
+      if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current); 
+      // Start the first agent turn or continue simulation
+      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); 
     } else if (!isSimulating && simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
@@ -119,23 +161,21 @@ export default function EvolvingEchoPage() {
         clearTimeout(simulationLoopRef.current);
       }
     };
-  }, [isSimulating, simulationHasStarted, initialIdea, processAgentTurn]);
+  }, [isSimulating, simulationHasStarted, initialIdea, processAgentTurn, isLoadingAgentResponse]);
 
 
   const handleTranscription = (text: string) => {
-    if (!isSimulating) return; // Don't process if simulation is stopped
+    if (!isSimulating || isLoadingAgentResponse) return; 
 
     if (simulationLoopRef.current) {
-      clearTimeout(simulationLoopRef.current); // Pause AI simulation
+      clearTimeout(simulationLoopRef.current); 
     }
     
     addMessage(`Voice Input: ${text}`, "User", undefined, true);
-    setCurrentIdea(text); // User's voice input gets higher influence by becoming the current idea
+    setCurrentIdea(text); 
     
-    // Resume AI simulation with the next agent, considering the new user input
-    // The currentAgentIndexRef is already set for the next agent
-    if (isSimulating) { // Check again if simulation is still active
-       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); // Quicker resume
+    if (isSimulating) { 
+       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); 
     }
   };
 
@@ -154,6 +194,7 @@ export default function EvolvingEchoPage() {
                 <Controls
                   isSimulating={isSimulating}
                   isLoadingSummary={isLoadingSummary}
+                  isLoadingAgentResponse={isLoadingAgentResponse}
                   onStopSimulation={handleStopSimulation}
                   onTranscription={handleTranscription}
                 />
@@ -161,7 +202,7 @@ export default function EvolvingEchoPage() {
               <OutputActions summary={summary} isLoading={isLoadingSummary && !summary} />
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.0</p>
+              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.1</p>
             </SidebarFooter>
           </Sidebar>
 
@@ -169,10 +210,10 @@ export default function EvolvingEchoPage() {
             <main className="container mx-auto p-4 flex-1 flex flex-col">
               {!simulationHasStarted ? (
                 <div className="flex-1 flex items-center justify-center">
-                  <InitialIdeaForm onStartSimulation={handleStartSimulation} isLoading={isLoading} />
+                  <InitialIdeaForm onStartSimulation={handleStartSimulation} isLoading={isStartingSimulation} />
                 </div>
               ) : (
-                <ChatInterface messages={messages} />
+                <ChatInterface messages={messages} agents={AI_AGENTS} />
               )}
             </main>
           </SidebarInset>
@@ -181,5 +222,3 @@ export default function EvolvingEchoPage() {
     </SidebarProvider>
   );
 }
-
-    

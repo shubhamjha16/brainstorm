@@ -9,23 +9,37 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface ControlsProps {
   isSimulating: boolean;
   isLoadingSummary: boolean;
+  isLoadingAgentResponse: boolean;
   onStopSimulation: () => void;
   onTranscription: (text: string) => void;
 }
 
-export function Controls({ isSimulating, isLoadingSummary, onStopSimulation, onTranscription }: ControlsProps) {
+export function Controls({ 
+  isSimulating, 
+  isLoadingSummary, 
+  isLoadingAgentResponse, 
+  onStopSimulation, 
+  onTranscription 
+}: ControlsProps) {
+  const stopButtonDisabled = !isSimulating || isLoadingSummary || isLoadingAgentResponse;
+  const voiceInputDisabled = isLoadingSummary || isLoadingAgentResponse;
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
         <CardTitle className="text-lg">Controls</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <VoiceInput onTranscription={onTranscription} isSimulating={isSimulating} disabled={isLoadingSummary} />
+        <VoiceInput 
+          onTranscription={onTranscription} 
+          isSimulating={isSimulating} 
+          disabled={voiceInputDisabled} 
+        />
         <Button
           onClick={onStopSimulation}
           variant="destructive"
           className="w-full"
-          disabled={!isSimulating || isLoadingSummary}
+          disabled={stopButtonDisabled}
           aria-label="Stop simulation"
         >
           {isLoadingSummary ? (
@@ -35,9 +49,13 @@ export function Controls({ isSimulating, isLoadingSummary, onStopSimulation, onT
           )}
           {isLoadingSummary ? "Generating Summary..." : "Stop Evolving & Summarize"}
         </Button>
+        {isLoadingAgentResponse && (
+          <div className="flex items-center justify-center text-sm text-muted-foreground">
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <span>AI is thinking...</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
-
-    

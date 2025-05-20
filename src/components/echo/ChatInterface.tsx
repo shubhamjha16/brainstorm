@@ -1,16 +1,19 @@
 
 "use client";
 
-import type { ChatMessageData } from "@/types";
+import type { Agent, ChatMessageData } from "@/types";
 import { ChatMessage } from "./ChatMessage";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import React, { useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
+import { AgentAvatar } from "./AgentAvatar";
 
 interface ChatInterfaceProps {
   messages: ChatMessageData[];
+  agents: Agent[]; // Pass agents to find the current one for loading state
 }
 
-export function ChatInterface({ messages }: ChatInterfaceProps) {
+export function ChatInterface({ messages, agents }: ChatInterfaceProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,6 +24,8 @@ export function ChatInterface({ messages }: ChatInterfaceProps) {
       }
     }
   }, [messages]);
+
+  const currentLoadingAgent = messages.find(msg => msg.isLoading)?.agent;
 
   return (
     <ScrollArea className="h-[calc(100vh-200px)] p-4 rounded-md border shadow-inner bg-background/50" ref={scrollAreaRef} aria-live="polite">
@@ -34,8 +39,8 @@ export function ChatInterface({ messages }: ChatInterfaceProps) {
       {messages.map((msg) => (
         <ChatMessage key={msg.id} message={msg} />
       ))}
+      {/* Optional: Show a persistent loader if the last message is a loading message from an agent */}
+      {/* This part is handled by ChatMessage now if msg.isLoading is true */}
     </ScrollArea>
   );
 }
-
-    

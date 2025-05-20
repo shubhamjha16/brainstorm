@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 interface VoiceInputProps {
   onTranscription: (text: string) => void;
   isSimulating: boolean;
-  disabled?: boolean;
+  disabled?: boolean; // General disabled prop from parent (e.g., while agent is thinking or summary is loading)
 }
 
 export function VoiceInput({ onTranscription, isSimulating, disabled }: VoiceInputProps) {
@@ -94,8 +94,11 @@ export function VoiceInput({ onTranscription, isSimulating, disabled }: VoiceInp
     }
   }, [isSimulating, isRecording]);
 
-
-  const effectiveDisabled = disabled || !isSimulating || isTranscribing;
+  // Button should be disabled if:
+  // 1. Parent explicitly disables it (e.g. agent thinking, summary loading)
+  // 2. Simulation is not active (unless currently recording, to allow stopping)
+  // 3. Currently transcribing audio
+  const effectiveDisabled = disabled || (!isSimulating && !isRecording) || isTranscribing;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -117,8 +120,9 @@ export function VoiceInput({ onTranscription, isSimulating, disabled }: VoiceInp
         {isTranscribing ? "Transcribing..." : isRecording ? "Stop Recording" : "Add Voice Input"}
       </Button>
       {isRecording && <p className="text-sm text-muted-foreground animate-pulse">Recording in progress...</p>}
+      {!isSimulating && simulationHasStarted && !isRecording && (
+         <p className="text-xs text-muted-foreground">Simulation paused. Resume by stopping or through other controls.</p>
+      )}
     </div>
   );
 }
-
-    

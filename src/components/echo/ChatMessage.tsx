@@ -4,7 +4,7 @@
 import type { ChatMessageData } from "@/types";
 import { AgentAvatar } from "./AgentAvatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Mic } from "lucide-react";
+import { User, Mic, Loader2 } from "lucide-react"; // Added Loader2
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
         className={cn(
           "max-w-[75%] shadow-md",
           message.isUser ? "bg-accent text-accent-foreground" : "bg-card text-card-foreground",
-          message.isVoiceInput && "border-primary border-2"
+          message.isVoiceInput && "border-primary border-2",
+          message.isLoading && "opacity-70" // Style for loading messages
         )}
       >
         <CardHeader className="p-3 pb-1">
@@ -36,11 +37,18 @@ export function ChatMessage({ message }: ChatMessageProps) {
             {message.isVoiceInput && <Mic className="h-4 w-4 text-primary" />}
           </CardTitle>
           <CardDescription className="text-xs">
-            {format(new Date(message.timestamp), "HH:mm")}
+            {message.isLoading ? "Thinking..." : format(new Date(message.timestamp), "HH:mm")}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-3 pt-0 text-sm whitespace-pre-wrap">
-          {message.text}
+          {message.isLoading && message.agent ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>{message.text || `${message.agent.name} is refining the idea...`}</span>
+            </div>
+          ) : (
+            message.text
+          )}
         </CardContent>
       </Card>
       {message.isUser && !isAgentMessage && (
@@ -51,5 +59,3 @@ export function ChatMessage({ message }: ChatMessageProps) {
     </div>
   );
 }
-
-    

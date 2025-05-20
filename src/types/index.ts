@@ -10,17 +10,16 @@ export interface Agent {
 
 export interface ChatMessageData {
   id: string;
-  sender: 'User' | Agent['name'];
+  sender: 'User' | Agent['name'] | 'System'; // System can be used for general messages if needed
   text: string;
   timestamp: Date;
   isUser: boolean;
   agent?: Agent;
   isVoiceInput?: boolean;
+  isLoading?: boolean; // To indicate if this is a temporary loading message for an agent
 }
 
 export interface SummaryData {
   summary: string;
   keyContributions: string;
 }
-
-    

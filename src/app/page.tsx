@@ -9,17 +9,20 @@ import { ChatInterface } from "@/components/echo/ChatInterface";
 import { Controls } from "@/components/echo/Controls";
 import { OutputActions } from "@/components/echo/OutputActions";
 import { ImplementationPlan } from "@/components/echo/ImplementationPlan";
-import { MarketingTab } from "@/components/echo/MarketingTab"; // Import new component
+import { MarketingTab } from "@/components/echo/MarketingTab";
 import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
 import { refineIdea } from "@/ai/flows/refine-idea-flow";
 import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan";
-// import { generateInstagramPost } from "@/ai/flows/generate-instagram-post-flow"; // Not called directly from here
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, PanelLeftClose, PanelRightOpen, Wand2 } from "lucide-react";
+import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, PanelLeftClose, PanelRightOpen, ImageIcon, Wand2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 const AI_AGENTS: Agent[] = [
   { id: "gpt4", name: "GPT-4", provider: "OpenAI", role: "The Pragmatist", avatarColor: "bg-green-500", icon: Bot },
@@ -40,15 +43,12 @@ function EvolvingEchoPageContent() {
   const [simulationHasStarted, setSimulationHasStarted] = useState<boolean>(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [implementationPlan, setImplementationPlan] = useState<ImplementationPlanData | null>(null);
-  // Marketing state removed from here, will be managed within MarketingTab.tsx for now
-  // If global state for marketing post is needed later, it can be added back.
-  // const [marketingPost, setMarketingPost] = useState<MarketingPostData | null>(null);
+  const [marketingPost, setMarketingPost] = useState<MarketingPostData | null>(null);
 
   const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [isLoadingAgentResponse, setIsLoadingAgentResponse] = useState<boolean>(false);
   const [isLoadingImplementationPlan, setIsLoadingImplementationPlan] = useState<boolean>(false);
-  // const [isLoadingMarketingPost, setIsLoadingMarketingPost] = useState<boolean>(false); // Managed in MarketingTab
   const [activeTab, setActiveTab] = useState<string>("controlsOutput");
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isLoadingSummaryForContinue, setIsLoadingSummaryForContinue] = useState<boolean>(false);
@@ -108,11 +108,11 @@ function EvolvingEchoPageContent() {
     setIsPaused(false);
     setSummary(null);
     setImplementationPlan(null);
-    // setMarketingPost(null); // Clear marketing post if any
+    setMarketingPost(null); 
     currentAgentIndexRef.current = 0;
     isNextTurnVoiceSteeredRef.current = false;
     setIsStartingSimulation(false);
-    setActiveTab("controlsOutput"); // Default to controls tab
+    setActiveTab("controlsOutput");
   };
 
   const handlePauseResumeSimulation = () => {
@@ -150,8 +150,8 @@ function EvolvingEchoPageContent() {
       return;
     }
     setIsLoadingSummary(true);
-    setImplementationPlan(null); // Clear plan when stopping for new summary
-    // setMarketingPost(null); // Clear marketing post
+    setImplementationPlan(null); 
+    setMarketingPost(null);
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
@@ -323,15 +323,15 @@ function EvolvingEchoPageContent() {
               </TabsContent>
 
               <TabsContent value="marketing" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-                <MarketingTab summary={summary} />
+                <MarketingTab summary={summary} onPostGenerated={setMarketingPost} />
               </TabsContent>
             </Tabs>
           </SidebarContent>
           <SidebarFooter className="p-4 mt-auto border-t group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.7</p> {/* Version Bump */}
+            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.8</p> 
           </SidebarFooter>
            <SidebarFooter className="p-2 mt-auto border-t hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block">
-            <p className="text-xs text-muted-foreground text-center">v1.7</p>
+            <p className="text-xs text-muted-foreground text-center">v1.8</p>
           </SidebarFooter>
         </Sidebar>
 
@@ -345,6 +345,45 @@ function EvolvingEchoPageContent() {
               <ChatInterface messages={messages} agents={AI_AGENTS} />
             )}
           </main>
+          {marketingPost && !isSimulating && (
+            <section className="container mx-auto p-4 mt-6 mb-6">
+              <Card className="shadow-xl border-primary border-2">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center">
+                    <ImageIcon className="h-6 w-6 mr-3 text-primary" />
+                    Generated Instagram Post
+                  </CardTitle>
+                  <CardDescription>This post was generated based on the finalized idea. You can regenerate it from the 'Marketing' tab.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h3 className="text-md font-semibold">
+                       Generated Image
+                    </h3>
+                    <div className="rounded-lg overflow-hidden border bg-muted aspect-square w-full max-w-md mx-auto shadow-inner">
+                      <Image
+                        src={marketingPost.imageUri}
+                        alt={`AI-generated image for ${marketingPost.imageKeywords}`}
+                        width={500}
+                        height={500}
+                        className="object-cover w-full h-full"
+                        priority={true} 
+                      />
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1 text-center">Image Focus: {marketingPost.imageKeywords}</p>
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="text-md font-semibold">
+                       Generated Caption
+                    </h3>
+                    <ScrollArea className="h-[250px] md:h-[calc(500px_-_theme(spacing.2)_-_theme(fontSize.sm)_-_theme(lineHeight.tight))] p-3 bg-muted rounded-md border text-sm whitespace-pre-wrap shadow-inner">
+                      {marketingPost.caption}
+                    </ScrollArea>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
         </SidebarInset>
       </div>
     </div>

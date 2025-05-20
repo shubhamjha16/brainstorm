@@ -13,9 +13,11 @@ import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
 import { refineIdea } from "@/ai/flows/refine-idea-flow";
 import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, Menu } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarRail, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter } from "@/components/ui/sidebar";
+import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, PanelLeftClose, PanelRightOpen } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const AI_AGENTS: Agent[] = [
   { id: "gpt4", name: "GPT-4", provider: "OpenAI", role: "The Pragmatist", avatarColor: "bg-green-500", icon: Bot },
@@ -28,7 +30,7 @@ const AI_AGENTS: Agent[] = [
 
 const SIMULATION_DELAY_MS = 1500;
 
-export default function EvolvingEchoPage() {
+function EvolvingEchoPageContent() {
   const [initialIdea, setInitialIdea] = useState<string | null>(null);
   const [currentIdea, setCurrentIdea] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
@@ -49,6 +51,7 @@ export default function EvolvingEchoPage() {
   const isNextTurnVoiceSteeredRef = useRef<boolean>(false);
 
   const { toast } = useToast();
+  const { open: sidebarOpen, toggleSidebar, state: sidebarState } = useSidebar();
 
   const addMessage = useCallback((text: string, sender: 'User' | Agent['name'] | 'System', agent?: Agent, isVoiceInput: boolean = false, isLoading: boolean = false) => {
     setMessages((prevMessages) => {
@@ -252,75 +255,95 @@ export default function EvolvingEchoPage() {
 
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <div className="flex flex-col min-h-screen bg-background">
-        <Header />
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar side="right" variant="sidebar" collapsible="icon" className="border-l">
-            <SidebarRail />
-            <SidebarHeader className="p-4 flex items-center justify-between group-data-[state=collapsed]:group-data-[collapsible=icon]:p-2 group-data-[state=collapsed]:group-data-[collapsible=icon]:justify-center">
-               <h2 className="text-xl font-semibold text-primary group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">Tools</h2>
-               <Menu className="h-5 w-5 text-primary hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block" />
-            </SidebarHeader>
-            <SidebarContent className="p-0">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-                <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-                  <TabsTrigger value="controlsOutput">Controls &amp; Summary</TabsTrigger>
-                  <TabsTrigger value="plan" disabled={!implementationPlan && !isLoadingImplementationPlan && !summary}>Plan</TabsTrigger>
-                </TabsList>
-                <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-                  {simulationHasStarted && (
-                    <Controls
-                      isSimulating={isSimulating}
-                      isPaused={isPaused}
-                      simulationHasStarted={simulationHasStarted}
-                      isLoadingSummary={isLoadingSummary}
-                      isLoadingSummaryForContinue={isLoadingSummaryForContinue}
-                      isLoadingAgentResponse={isLoadingAgentResponse}
-                      onStopSimulation={handleStopSimulation}
-                      onPauseResumeSimulation={handlePauseResumeSimulation}
-                      onSummarizeAndContinue={handleSummarizeAndContinue}
-                      onTranscription={handleTranscription}
-                      hasMessages={messages.length > 0}
-                    />
-                  )}
-                  <OutputActions
-                    summary={summary}
-                    isLoading={isLoadingSummary || isLoadingSummaryForContinue}
-                    onGeneratePlan={handleGenerateImplementationPlan}
-                    isGeneratingPlan={isLoadingImplementationPlan}
-                    planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
+    <div className="flex flex-col min-h-screen bg-background">
+      <Header />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar side="left" variant="sidebar" collapsible="icon" className="border-r">
+          {/* Removed SidebarRail */}
+          <SidebarHeader className="p-4 flex items-center justify-between group-data-[state=collapsed]:group-data-[collapsible=icon]:p-2 group-data-[state=collapsed]:group-data-[collapsible=icon]:justify-center">
+             <h2 className={cn(
+                "text-xl font-semibold text-primary",
+                sidebarState === 'collapsed' && sidebarOpen === false && 'hidden' // Hide "Tools" when truly collapsed
+             )}>
+               Tools
+             </h2>
+             <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+             >
+                {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+                <span className="sr-only">Toggle Sidebar</span>
+            </Button>
+          </SidebarHeader>
+          <SidebarContent className="p-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
+                <TabsTrigger value="controlsOutput">Controls &amp; Summary</TabsTrigger>
+                <TabsTrigger value="plan" disabled={!implementationPlan && !isLoadingImplementationPlan && !summary}>Plan</TabsTrigger>
+              </TabsList>
+              <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
+                {simulationHasStarted && (
+                  <Controls
+                    isSimulating={isSimulating}
+                    isPaused={isPaused}
+                    simulationHasStarted={simulationHasStarted}
+                    isLoadingSummary={isLoadingSummary}
+                    isLoadingSummaryForContinue={isLoadingSummaryForContinue}
+                    isLoadingAgentResponse={isLoadingAgentResponse}
+                    onStopSimulation={handleStopSimulation}
+                    onPauseResumeSimulation={handlePauseResumeSimulation}
+                    onSummarizeAndContinue={handleSummarizeAndContinue}
+                    onTranscription={handleTranscription}
+                    hasMessages={messages.length > 0}
                   />
-                </TabsContent>
-                <TabsContent value="plan" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-                  <ImplementationPlan
-                    plan={implementationPlan}
-                    isLoading={isLoadingImplementationPlan && !implementationPlan}
-                  />
-                </TabsContent>
-              </Tabs>
-            </SidebarContent>
-            <SidebarFooter className="p-4 mt-auto border-t group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-              <p className="text-xs text-muted-foreground text-center">Brainstorm v1.6</p>
-            </SidebarFooter>
-             <SidebarFooter className="p-2 mt-auto border-t hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block">
-              <p className="text-xs text-muted-foreground text-center">v1.6</p>
-            </SidebarFooter>
-          </Sidebar>
+                )}
+                <OutputActions
+                  summary={summary}
+                  isLoading={isLoadingSummary || isLoadingSummaryForContinue}
+                  onGeneratePlan={handleGenerateImplementationPlan}
+                  isGeneratingPlan={isLoadingImplementationPlan}
+                  planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
+                />
+              </TabsContent>
+              <TabsContent value="plan" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
+                <ImplementationPlan
+                  plan={implementationPlan}
+                  isLoading={isLoadingImplementationPlan && !implementationPlan}
+                />
+              </TabsContent>
+            </Tabs>
+          </SidebarContent>
+          <SidebarFooter className="p-4 mt-auto border-t group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
+            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.6</p>
+          </SidebarFooter>
+           <SidebarFooter className="p-2 mt-auto border-t hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block">
+            <p className="text-xs text-muted-foreground text-center">v1.6</p>
+          </SidebarFooter>
+        </Sidebar>
 
-          <SidebarInset className="flex-1 flex flex-col overflow-y-auto">
-            <main className="container mx-auto p-4 flex-1 flex flex-col">
-              {!simulationHasStarted ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <InitialIdeaForm onStartSimulation={handleStartSimulation} isLoading={isStartingSimulation} />
-                </div>
-              ) : (
-                <ChatInterface messages={messages} agents={AI_AGENTS} />
-              )}
-            </main>
-          </SidebarInset>
-        </div>
+        <SidebarInset className="flex-1 flex flex-col overflow-y-auto">
+          <main className="container mx-auto p-4 flex-1 flex flex-col">
+            {!simulationHasStarted ? (
+              <div className="flex-1 flex items-center justify-center">
+                <InitialIdeaForm onStartSimulation={handleStartSimulation} isLoading={isStartingSimulation} />
+              </div>
+            ) : (
+              <ChatInterface messages={messages} agents={AI_AGENTS} />
+            )}
+          </main>
+        </SidebarInset>
       </div>
+    </div>
+  );
+}
+
+export default function EvolvingEchoPage() {
+  return (
+    <SidebarProvider defaultOpen={true}> {/* Set defaultOpen to false if you want it initially collapsed */}
+      <EvolvingEchoPageContent />
     </SidebarProvider>
   );
 }
+
+    

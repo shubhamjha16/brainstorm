@@ -8,10 +8,10 @@ import { InitialIdeaForm } from "@/components/echo/InitialIdeaForm";
 import { ChatInterface } from "@/components/echo/ChatInterface";
 import { Controls } from "@/components/echo/Controls";
 import { OutputActions } from "@/components/echo/OutputActions";
-import { ImplementationPlan } from "@/components/echo/ImplementationPlan"; // New component
+// import { ImplementationPlan } from "@/components/echo/ImplementationPlan"; // No longer imported here
 import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
 import { refineIdea } from "@/ai/flows/refine-idea-flow";
-import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan"; // New flow
+import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan";
 import { useToast } from "@/hooks/use-toast";
 import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, Loader2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
@@ -91,7 +91,7 @@ export default function EvolvingEchoPage() {
     setIsSimulating(true);
     setSimulationHasStarted(true);
     setSummary(null);
-    setImplementationPlan(null); // Reset implementation plan
+    setImplementationPlan(null); 
     currentAgentIndexRef.current = 0;
     setIsStartingSimulation(false);
   };
@@ -106,7 +106,7 @@ export default function EvolvingEchoPage() {
       return;
     }
     setIsLoadingSummary(true);
-    setImplementationPlan(null); // Clear previous plan when generating new summary
+    setImplementationPlan(null); 
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
@@ -186,14 +186,14 @@ export default function EvolvingEchoPage() {
     setIsLoadingImplementationPlan(true);
     setImplementationPlan(null);
     try {
-      const plan = await generateImplementationPlan({ summarizedIdea });
-      setImplementationPlan(plan);
+      const planResult = await generateImplementationPlan({ summarizedIdea });
+      setImplementationPlan(planResult);
       toast({ title: "Implementation Plan Generated", description: "The detailed plan is now available."});
     } catch (error) {
       console.error("Implementation plan generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({ title: "Plan Generation Error", description: `Could not generate implementation plan: ${errorMessage}`, variant: "destructive" });
-      setImplementationPlan(null); // Ensure plan is null on error
+      setImplementationPlan(null); 
     } finally {
       setIsLoadingImplementationPlan(false);
     }
@@ -222,14 +222,15 @@ export default function EvolvingEchoPage() {
               )}
               <OutputActions 
                 summary={summary} 
-                isLoading={isLoadingSummary && !summary} 
+                isLoading={isLoadingSummary} 
                 onGeneratePlan={handleGenerateImplementationPlan}
                 isGeneratingPlan={isLoadingImplementationPlan}
+                plan={implementationPlan} 
               />
-              <ImplementationPlan plan={implementationPlan} isLoading={isLoadingImplementationPlan} />
+              {/* ImplementationPlan is now rendered within OutputActions */}
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.2</p>
+              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.3</p>
             </SidebarFooter>
           </Sidebar>
 

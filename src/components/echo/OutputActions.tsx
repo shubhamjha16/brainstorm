@@ -1,9 +1,9 @@
 
 "use client";
 
-import type { SummaryData } from "@/types";
+import type { SummaryData, ImplementationPlanData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Save, Loader2, Zap } from "lucide-react"; // Added Zap for Generate Plan
+import { Download, FileText, Save, Loader2, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -19,15 +19,18 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
+import { ImplementationPlan } from "./ImplementationPlan"; // Import ImplementationPlan
+import { Separator } from "@/components/ui/separator";
 
 interface OutputActionsProps {
   summary: SummaryData | null;
   isLoading: boolean; // For summary loading
   onGeneratePlan: (summarizedIdea: string) => void;
   isGeneratingPlan: boolean;
+  plan: ImplementationPlanData | null; // Add plan prop
 }
 
-export function OutputActions({ summary, isLoading, onGeneratePlan, isGeneratingPlan }: OutputActionsProps) {
+export function OutputActions({ summary, isLoading, onGeneratePlan, isGeneratingPlan, plan }: OutputActionsProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -77,7 +80,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     }
   };
 
-  if (isLoading) { // isLoading refers to summary loading
+  if (isLoading && !summary) { // Show loader only if summary is loading and not yet available
     return (
       <Card className="shadow-lg">
         <CardHeader>
@@ -91,7 +94,7 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     );
   }
 
-  if (!summary) {
+  if (!summary && !isLoading) { // No summary and not loading summary
     return (
        <Card className="shadow-lg">
         <CardHeader>
@@ -109,52 +112,61 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="text-lg">Final Evolved Idea</CardTitle>
-        <CardDescription>Review, save, or export the summarized discussion. Then, generate an implementation plan.</CardDescription>
+        <CardTitle className="text-lg">Final Output & Planning</CardTitle>
+        <CardDescription>Review the summarized idea, manage it, and generate an implementation plan.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" className="w-full">
-                <FileText className="mr-2 h-4 w-4" /> Review Summary
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="max-w-2xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Evolved Idea Summary</AlertDialogTitle>
-              </AlertDialogHeader>
-              <ScrollArea className="h-[60vh] max-h-[500px] p-1">
-                <AlertDialogDescription asChild>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold mb-1 text-foreground">Summary of Idea:</h3>
-                      <p className="text-sm whitespace-pre-wrap">{summary.summary}</p>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold mb-1 text-foreground">Key Contributions:</h3>
-                       <p className="text-sm whitespace-pre-wrap">{summary.keyContributions}</p>
-                    </div>
-                  </div>
-                </AlertDialogDescription>
-              </ScrollArea>
-              <AlertDialogFooter>
-                <AlertDialogAction>Close</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {summary && (
+            <>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                    <FileText className="mr-2 h-4 w-4" /> Review Summary
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-2xl">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Evolved Idea Summary</AlertDialogTitle>
+                  </AlertDialogHeader>
+                  <ScrollArea className="h-[60vh] max-h-[500px] p-1">
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="font-semibold mb-1 text-foreground">Summary of Idea:</h3>
+                          <p className="text-sm whitespace-pre-wrap">{summary.summary}</p>
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-1 text-foreground">Key Contributions:</h3>
+                           <p className="text-sm whitespace-pre-wrap">{summary.keyContributions}</p>
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </ScrollArea>
+                  <AlertDialogFooter>
+                    <AlertDialogAction>Close</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
 
-        <Button onClick={handleSave} className="w-full" disabled={isSaving || isGeneratingPlan}>
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? "Saving..." : "Save Summary"}
-        </Button>
-        <Button onClick={handleExport} className="w-full" disabled={isExporting || isGeneratingPlan}>
-          {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-          {isExporting ? "Exporting..." : "Export Summary"}
-        </Button>
-        <Button onClick={handleGeneratePlanClick} className="w-full" variant="secondary" disabled={!summary || isGeneratingPlan}>
-          {isGeneratingPlan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-          {isGeneratingPlan ? "Generating Plan..." : "Generate Implementation Plan"}
-        </Button>
+              <Button onClick={handleSave} className="w-full" disabled={isSaving || isGeneratingPlan}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isSaving ? "Saving Summary..." : "Save Summary"}
+              </Button>
+              <Button onClick={handleExport} className="w-full" disabled={isExporting || isGeneratingPlan}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                {isExporting ? "Exporting Summary..." : "Export Summary"}
+              </Button>
+              <Button onClick={handleGeneratePlanClick} className="w-full" variant="secondary" disabled={!summary || isGeneratingPlan || !!plan}>
+                {isGeneratingPlan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
+                {isGeneratingPlan ? "Generating Plan..." : (plan ? "Plan Generated" : "Generate Implementation Plan")}
+              </Button>
+            </>
+          )}
+
+          {(isGeneratingPlan || plan) && <Separator className="my-4" />}
+          
+          <ImplementationPlan plan={plan} isLoading={isGeneratingPlan && !plan} />
+
       </CardContent>
     </Card>
   );

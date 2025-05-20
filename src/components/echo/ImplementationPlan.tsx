@@ -3,12 +3,11 @@
 
 import type { ImplementationPlanData } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"; // Still use Card for SectionCard
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Download, FileText, Loader2, GanttChartSquare, DollarSign, Users, CheckCircle, Lightbulb } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
-import { Separator } from "@/components/ui/separator";
 
 interface ImplementationPlanProps {
   plan: ImplementationPlanData | null;
@@ -51,33 +50,46 @@ export function ImplementationPlan({ plan, isLoading }: ImplementationPlanProps)
 
   if (isLoading) {
     return (
-      <div className="mt-6">
-        <div className="flex items-center mb-2">
-          <Loader2 className="h-5 w-5 mr-2 animate-spin text-primary" />
-          <h3 className="text-lg font-semibold">Generating Implementation Plan</h3>
-        </div>
-        <p className="text-sm text-muted-foreground mb-4">The AI is preparing the detailed plan...</p>
-        <div className="flex items-center justify-center p-8 border rounded-md bg-background/50">
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <Loader2 className="h-5 w-5 mr-2 animate-spin text-primary" />
+            Generating Implementation Plan
+          </CardTitle>
+          <CardDescription>The AI is preparing the detailed plan...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center p-8 border-t">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="ml-2 text-muted-foreground">Loading plan details...</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!plan) {
-    return null; // Don't render anything if there's no plan and not loading
+    return (
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-lg">Implementation Plan</CardTitle>
+          <CardDescription>Generate a plan from the summarized idea in the 'Controls &amp; Summary' tab.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col items-center justify-center p-8 text-muted-foreground border-t">
+          <FileText className="h-10 w-10 opacity-50 mb-2" />
+          No implementation plan generated yet.
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="mt-4 pt-4"> {/* Adjusted margin and padding */}
-      <div className="mb-4">
-        <h3 className="text-xl font-semibold">Implementation Plan</h3>
-        <p className="text-sm text-muted-foreground">A detailed plan for bringing the evolved idea to life.</p>
-      </div>
-      <div className="space-y-6">
-        <ScrollArea className="h-[calc(100vh-450px)] max-h-[500px] pr-3 border rounded-md p-1"> {/* Added border and padding to ScrollArea */}
-          <div className="space-y-4 p-3"> {/* Added padding inside scroll area */}
+    <Card className="shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-lg">Implementation Plan</CardTitle>
+        <CardDescription>A detailed plan for bringing the evolved idea to life.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <ScrollArea className="h-[calc(100vh-450px)] max-h-[550px] pr-3 border rounded-md p-1">
+          <div className="space-y-4 p-3">
             <SectionCard icon={GanttChartSquare} title="Timeframe" content={plan.timeframe} />
             <SectionCard icon={FileText} title="Project Phases (Flowchart)" content={plan.projectPhasesFlowchart} />
             <SectionCard icon={DollarSign} title="Cost Estimation (Flowchart)" content={plan.costEstimationFlowchart} />
@@ -86,12 +98,12 @@ export function ImplementationPlan({ plan, isLoading }: ImplementationPlanProps)
             <SectionCard icon={Lightbulb} title="Refined Actionable Strategy" content={plan.refinedStrategy} />
           </div>
         </ScrollArea>
-        <Button onClick={handleExportPlan} className="w-full mt-4" disabled={isExporting}>
+        <Button onClick={handleExportPlan} className="w-full mt-2" disabled={isExporting}>
           {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
           {isExporting ? "Exporting Plan..." : "Export Implementation Plan"}
         </Button>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -102,7 +114,7 @@ interface SectionCardProps {
 }
 
 const SectionCard: React.FC<SectionCardProps> = ({ icon: Icon, title, content }) => (
-  <Card className="bg-card/80 shadow-sm"> {/* Adjusted background for contrast if needed */}
+  <Card className="bg-card/80 shadow-sm">
     <CardHeader className="pb-2 pt-3 px-4">
       <CardTitle className="text-md flex items-center font-semibold">
         <Icon className="h-5 w-5 mr-2 text-primary" />

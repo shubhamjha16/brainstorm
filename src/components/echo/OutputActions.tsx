@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { SummaryData, ImplementationPlanData } from "@/types";
+import type { SummaryData } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Save, Loader2, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -19,18 +19,16 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import React from "react";
-import { ImplementationPlan } from "./ImplementationPlan"; // Import ImplementationPlan
-import { Separator } from "@/components/ui/separator";
 
 interface OutputActionsProps {
   summary: SummaryData | null;
   isLoading: boolean; // For summary loading
   onGeneratePlan: (summarizedIdea: string) => void;
   isGeneratingPlan: boolean;
-  plan: ImplementationPlanData | null; // Add plan prop
+  planIsAvailable: boolean; // To know if plan exists or is loading (for button state)
 }
 
-export function OutputActions({ summary, isLoading, onGeneratePlan, isGeneratingPlan, plan }: OutputActionsProps) {
+export function OutputActions({ summary, isLoading, onGeneratePlan, isGeneratingPlan, planIsAvailable }: OutputActionsProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -80,11 +78,11 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     }
   };
 
-  if (isLoading && !summary) { // Show loader only if summary is loading and not yet available
+  if (isLoading && !summary) { 
     return (
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-lg">Output</CardTitle>
+          <CardTitle className="text-lg">Summary Output</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center p-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -94,11 +92,11 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
     );
   }
 
-  if (!summary && !isLoading) { // No summary and not loading summary
+  if (!summary && !isLoading) { 
     return (
        <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-lg">Output</CardTitle>
+          <CardTitle className="text-lg">Summary Output</CardTitle>
           <CardDescription>Summary and actions will appear here once the simulation is stopped.</CardDescription>
         </CardHeader>
          <CardContent className="flex items-center justify-center p-8 text-muted-foreground">
@@ -112,8 +110,8 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
   return (
     <Card className="shadow-lg">
       <CardHeader>
-        <CardTitle className="text-lg">Final Output & Planning</CardTitle>
-        <CardDescription>Review the summarized idea, manage it, and generate an implementation plan.</CardDescription>
+        <CardTitle className="text-lg">Final Summary &amp; Actions</CardTitle>
+        <CardDescription>Review the summarized idea and manage it.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
           {summary && (
@@ -156,17 +154,12 @@ export function OutputActions({ summary, isLoading, onGeneratePlan, isGenerating
                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 {isExporting ? "Exporting Summary..." : "Export Summary"}
               </Button>
-              <Button onClick={handleGeneratePlanClick} className="w-full" variant="secondary" disabled={!summary || isGeneratingPlan || !!plan}>
+              <Button onClick={handleGeneratePlanClick} className="w-full" variant="secondary" disabled={!summary || isGeneratingPlan || planIsAvailable}>
                 {isGeneratingPlan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                {isGeneratingPlan ? "Generating Plan..." : (plan ? "Plan Generated" : "Generate Implementation Plan")}
+                {isGeneratingPlan ? "Generating Plan..." : (planIsAvailable && !isGeneratingPlan ? "Plan Generated" : "Generate Implementation Plan")}
               </Button>
             </>
           )}
-
-          {(isGeneratingPlan || plan) && <Separator className="my-4" />}
-          
-          <ImplementationPlan plan={plan} isLoading={isGeneratingPlan && !plan} />
-
       </CardContent>
     </Card>
   );

@@ -8,13 +8,14 @@ import { InitialIdeaForm } from "@/components/echo/InitialIdeaForm";
 import { ChatInterface } from "@/components/echo/ChatInterface";
 import { Controls } from "@/components/echo/Controls";
 import { OutputActions } from "@/components/echo/OutputActions";
-// import { ImplementationPlan } from "@/components/echo/ImplementationPlan"; // No longer imported here
+import { ImplementationPlan } from "@/components/echo/ImplementationPlan";
 import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
 import { refineIdea } from "@/ai/flows/refine-idea-flow";
 import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, Loader2 } from "lucide-react";
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarTrigger } from "@/components/ui/sidebar";
+import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale } from "lucide-react";
+import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter } from "@/components/ui/sidebar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const AI_AGENTS: Agent[] = [
   { id: "gpt4", name: "GPT-4", provider: "OpenAI", role: "The Pragmatist", avatarColor: "bg-green-500", icon: Bot },
@@ -25,7 +26,7 @@ const AI_AGENTS: Agent[] = [
   { id: "jurassic", name: "Jurassic", provider: "AI21 Labs", role: "The Historian", avatarColor: "bg-orange-500", icon: Brain },
 ];
 
-const SIMULATION_DELAY_MS = 1500; 
+const SIMULATION_DELAY_MS = 1500;
 
 export default function EvolvingEchoPage() {
   const [initialIdea, setInitialIdea] = useState<string | null>(null);
@@ -35,11 +36,12 @@ export default function EvolvingEchoPage() {
   const [simulationHasStarted, setSimulationHasStarted] = useState<boolean>(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [implementationPlan, setImplementationPlan] = useState<ImplementationPlanData | null>(null);
-  const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false); 
+  const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false);
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [isLoadingAgentResponse, setIsLoadingAgentResponse] = useState<boolean>(false);
   const [isLoadingImplementationPlan, setIsLoadingImplementationPlan] = useState<boolean>(false);
-  
+  const [activeTab, setActiveTab] = useState<string>("controlsOutput");
+
   const currentAgentIndexRef = useRef<number>(0);
   const simulationLoopRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -61,7 +63,7 @@ export default function EvolvingEchoPage() {
               isUser: sender === 'User',
               agent,
               isVoiceInput,
-              isLoading: false, 
+              isLoading: false,
             },
           ];
         }
@@ -86,14 +88,15 @@ export default function EvolvingEchoPage() {
     setIsStartingSimulation(true);
     setInitialIdea(idea);
     setCurrentIdea(idea);
-    setMessages([]); 
+    setMessages([]);
     addMessage(idea, "User");
     setIsSimulating(true);
     setSimulationHasStarted(true);
     setSummary(null);
-    setImplementationPlan(null); 
+    setImplementationPlan(null);
     currentAgentIndexRef.current = 0;
     setIsStartingSimulation(false);
+    setActiveTab("controlsOutput");
   };
 
   const handleStopSimulation = useCallback(async () => {
@@ -106,7 +109,7 @@ export default function EvolvingEchoPage() {
       return;
     }
     setIsLoadingSummary(true);
-    setImplementationPlan(null); 
+    setImplementationPlan(null);
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
@@ -126,11 +129,11 @@ export default function EvolvingEchoPage() {
 
     const agent = AI_AGENTS[currentAgentIndexRef.current];
     setIsLoadingAgentResponse(true);
-    addMessage(`${agent.name} is thinking...`, agent.name, agent, false, true); 
+    addMessage(`${agent.name} is thinking...`, agent.name, agent, false, true);
 
     try {
       const { refinedIdea } = await refineIdea({ currentIdea, agentName: agent.name, agentRole: agent.role });
-      addMessage(refinedIdea, agent.name, agent); 
+      addMessage(refinedIdea, agent.name, agent);
       setCurrentIdea(refinedIdea);
     } catch (error) {
       console.error(`Error with ${agent.name}:`, error);
@@ -142,8 +145,8 @@ export default function EvolvingEchoPage() {
     }
 
     currentAgentIndexRef.current = (currentAgentIndexRef.current + 1) % AI_AGENTS.length;
-    
-    if (isSimulating) { 
+
+    if (isSimulating) {
       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS);
     }
 
@@ -151,8 +154,8 @@ export default function EvolvingEchoPage() {
 
   useEffect(() => {
     if (isSimulating && simulationHasStarted && initialIdea && !isLoadingAgentResponse) {
-      if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current); 
-      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); 
+      if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current);
+      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2);
     } else if (!isSimulating && simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
@@ -164,17 +167,17 @@ export default function EvolvingEchoPage() {
   }, [isSimulating, simulationHasStarted, initialIdea, processAgentTurn, isLoadingAgentResponse]);
 
   const handleTranscription = (text: string) => {
-    if (!isSimulating || isLoadingAgentResponse) return; 
+    if (!isSimulating || isLoadingAgentResponse) return;
 
     if (simulationLoopRef.current) {
-      clearTimeout(simulationLoopRef.current); 
+      clearTimeout(simulationLoopRef.current);
     }
-    
+
     addMessage(`Voice Input: ${text}`, "User", undefined, true);
-    setCurrentIdea(text); 
-    
-    if (isSimulating) { 
-       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2); 
+    setCurrentIdea(text);
+
+    if (isSimulating) {
+       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2);
     }
   };
 
@@ -189,11 +192,12 @@ export default function EvolvingEchoPage() {
       const planResult = await generateImplementationPlan({ summarizedIdea });
       setImplementationPlan(planResult);
       toast({ title: "Implementation Plan Generated", description: "The detailed plan is now available."});
+      setActiveTab("plan"); // Switch to plan tab after generation
     } catch (error) {
       console.error("Implementation plan generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       toast({ title: "Plan Generation Error", description: `Could not generate implementation plan: ${errorMessage}`, variant: "destructive" });
-      setImplementationPlan(null); 
+      setImplementationPlan(null);
     } finally {
       setIsLoadingImplementationPlan(false);
     }
@@ -207,30 +211,43 @@ export default function EvolvingEchoPage() {
         <div className="flex flex-1 overflow-hidden">
           <Sidebar side="right" variant="sidebar" collapsible="icon" className="border-l">
             <SidebarHeader className="p-4">
-               <h2 className="text-xl font-semibold text-primary">Controls & Output</h2>
+               <h2 className="text-xl font-semibold text-primary">Tools</h2>
             </SidebarHeader>
-            <SidebarContent className="p-4 space-y-6">
-              {simulationHasStarted && (
-                <Controls
-                  isSimulating={isSimulating}
-                  simulationHasStarted={simulationHasStarted}
-                  isLoadingSummary={isLoadingSummary}
-                  isLoadingAgentResponse={isLoadingAgentResponse}
-                  onStopSimulation={handleStopSimulation}
-                  onTranscription={handleTranscription}
-                />
-              )}
-              <OutputActions 
-                summary={summary} 
-                isLoading={isLoadingSummary} 
-                onGeneratePlan={handleGenerateImplementationPlan}
-                isGeneratingPlan={isLoadingImplementationPlan}
-                plan={implementationPlan} 
-              />
-              {/* ImplementationPlan is now rendered within OutputActions */}
+            <SidebarContent className="p-0"> {/* Removed padding for Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
+                <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10">
+                  <TabsTrigger value="controlsOutput">Controls &amp; Summary</TabsTrigger>
+                  <TabsTrigger value="plan" disabled={!implementationPlan && !isLoadingImplementationPlan && !summary}>Plan</TabsTrigger>
+                </TabsList>
+                <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6">
+                  {simulationHasStarted && (
+                    <Controls
+                      isSimulating={isSimulating}
+                      simulationHasStarted={simulationHasStarted}
+                      isLoadingSummary={isLoadingSummary}
+                      isLoadingAgentResponse={isLoadingAgentResponse}
+                      onStopSimulation={handleStopSimulation}
+                      onTranscription={handleTranscription}
+                    />
+                  )}
+                  <OutputActions
+                    summary={summary}
+                    isLoading={isLoadingSummary}
+                    onGeneratePlan={handleGenerateImplementationPlan}
+                    isGeneratingPlan={isLoadingImplementationPlan}
+                    planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
+                  />
+                </TabsContent>
+                <TabsContent value="plan" className="flex-1 overflow-y-auto p-4">
+                  <ImplementationPlan
+                    plan={implementationPlan}
+                    isLoading={isLoadingImplementationPlan && !implementationPlan}
+                  />
+                </TabsContent>
+              </Tabs>
             </SidebarContent>
-            <SidebarFooter className="p-4 mt-auto">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.3</p>
+            <SidebarFooter className="p-4 mt-auto border-t">
+              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.4</p>
             </SidebarFooter>
           </Sidebar>
 

@@ -37,10 +37,12 @@ export default function EvolvingEchoPage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [implementationPlan, setImplementationPlan] = useState<ImplementationPlanData | null>(null);
   const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false);
-  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
+  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false); // For final summary
   const [isLoadingAgentResponse, setIsLoadingAgentResponse] = useState<boolean>(false);
   const [isLoadingImplementationPlan, setIsLoadingImplementationPlan] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>("controlsOutput");
+  const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [isLoadingSummaryForContinue, setIsLoadingSummaryForContinue] = useState<boolean>(false); // For interim summary
 
   const currentAgentIndexRef = useRef<number>(0);
   const simulationLoopRef = useRef<NodeJS.Timeout | null>(null);
@@ -92,6 +94,7 @@ export default function EvolvingEchoPage() {
     addMessage(idea, "User");
     setIsSimulating(true);
     setSimulationHasStarted(true);
+    setIsPaused(false);
     setSummary(null);
     setImplementationPlan(null);
     currentAgentIndexRef.current = 0;
@@ -99,8 +102,33 @@ export default function EvolvingEchoPage() {
     setActiveTab("controlsOutput");
   };
 
+  const handlePauseResumeSimulation = () => {
+    setIsPaused((prevPaused) => !prevPaused);
+  };
+
+  const handleSummarizeAndContinue = async () => {
+    if (!isSimulating || messages.length === 0 || !initialIdea) {
+      toast({ title: "Not Ready", description: "Simulation not active or no messages to summarize.", variant: "default"});
+      return;
+    }
+    setIsLoadingSummaryForContinue(true);
+    try {
+      const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
+      const result = await summarizeDiscussion({ discussionText });
+      setSummary(result); // Update the main summary state
+      toast({ title: "Interim Summary Generated", description: "The discussion has been summarized. Evolution continues." });
+    } catch (error) {
+      console.error("Interim summarization error:", error);
+      toast({ title: "Summarization Error", description: "Could not generate interim summary.", variant: "destructive" });
+      setSummary({summary: "Error generating interim summary.", keyContributions: "Could not process contributions."});
+    } finally {
+      setIsLoadingSummaryForContinue(false);
+    }
+  };
+
   const handleStopSimulation = useCallback(async () => {
     setIsSimulating(false);
+    setIsPaused(false); // Ensure simulation is not paused when stopped
     if (simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
@@ -125,7 +153,7 @@ export default function EvolvingEchoPage() {
   }, [messages, toast, initialIdea]);
 
   const processAgentTurn = useCallback(async () => {
-    if (!isSimulating || isLoadingAgentResponse) return;
+    if (!isSimulating || isLoadingAgentResponse || isPaused || isLoadingSummary || isLoadingSummaryForContinue) return;
 
     const agent = AI_AGENTS[currentAgentIndexRef.current];
     setIsLoadingAgentResponse(true);
@@ -146,17 +174,16 @@ export default function EvolvingEchoPage() {
 
     currentAgentIndexRef.current = (currentAgentIndexRef.current + 1) % AI_AGENTS.length;
 
-    if (isSimulating) {
-      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS);
-    }
-
-  }, [isSimulating, currentIdea, addMessage, toast, isLoadingAgentResponse]);
+    // The useEffect will schedule the next turn if conditions are still met
+  }, [isSimulating, currentIdea, addMessage, toast, isLoadingAgentResponse, isPaused, isLoadingSummary, isLoadingSummaryForContinue]);
 
   useEffect(() => {
-    if (isSimulating && simulationHasStarted && initialIdea && !isLoadingAgentResponse) {
+    if (isSimulating && simulationHasStarted && initialIdea &&
+        !isLoadingAgentResponse && !isPaused && !isLoadingSummary && !isLoadingSummaryForContinue
+    ) {
       if(simulationLoopRef.current) clearTimeout(simulationLoopRef.current);
-      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2);
-    } else if (!isSimulating && simulationLoopRef.current) {
+      simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS); // Use full delay
+    } else if (simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
     return () => {
@@ -164,21 +191,39 @@ export default function EvolvingEchoPage() {
         clearTimeout(simulationLoopRef.current);
       }
     };
-  }, [isSimulating, simulationHasStarted, initialIdea, processAgentTurn, isLoadingAgentResponse]);
+  }, [
+      isSimulating, simulationHasStarted, initialIdea, processAgentTurn,
+      isLoadingAgentResponse, isPaused, isLoadingSummary, isLoadingSummaryForContinue
+    ]);
+
 
   const handleTranscription = (text: string) => {
-    if (!isSimulating || isLoadingAgentResponse) return;
+     if (!simulationHasStarted) {
+      toast({ title: "Not Active", description: "Start a simulation to use voice input.", variant: "default" });
+      return;
+    }
+    if (isLoadingAgentResponse || isLoadingSummary || isLoadingSummaryForContinue) {
+      toast({ title: "Busy", description: "Please wait for the current AI/Summary task to complete.", variant: "default" });
+      return;
+    }
 
-    if (simulationLoopRef.current) {
+    if (simulationLoopRef.current) { // Clear any pending agent turn
       clearTimeout(simulationLoopRef.current);
     }
 
     addMessage(`Voice Input: ${text}`, "User", undefined, true);
     setCurrentIdea(text);
 
-    if (isSimulating) {
-       simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2);
+    if (isPaused) {
+      setIsPaused(false); // Unpausing will trigger useEffect to reschedule processAgentTurn
+    } else if (isSimulating) {
+      // If simulating, also trigger rescheduling via useEffect by virtue of dependencies changing (or just let it run its course)
+      // To make it more immediate, we can call processAgentTurn directly or rely on useEffect.
+      // For consistency, let useEffect handle it. The currentIdea has changed.
+      // If an immediate turn is desired:
+      // simulationLoopRef.current = setTimeout(processAgentTurn, SIMULATION_DELAY_MS / 2);
     }
+    // If !isSimulating (i.e. fully stopped), currentIdea is updated for next manual start.
   };
 
   const handleGenerateImplementationPlan = useCallback(async (summarizedIdea: string) => {
@@ -192,7 +237,7 @@ export default function EvolvingEchoPage() {
       const planResult = await generateImplementationPlan({ summarizedIdea });
       setImplementationPlan(planResult);
       toast({ title: "Implementation Plan Generated", description: "The detailed plan is now available."});
-      setActiveTab("plan"); // Switch to plan tab after generation
+      setActiveTab("plan");
     } catch (error) {
       console.error("Implementation plan generation error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -213,7 +258,7 @@ export default function EvolvingEchoPage() {
             <SidebarHeader className="p-4">
                <h2 className="text-xl font-semibold text-primary">Tools</h2>
             </SidebarHeader>
-            <SidebarContent className="p-0"> {/* Removed padding for Tabs */}
+            <SidebarContent className="p-0">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
                 <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10">
                   <TabsTrigger value="controlsOutput">Controls &amp; Summary</TabsTrigger>
@@ -223,16 +268,21 @@ export default function EvolvingEchoPage() {
                   {simulationHasStarted && (
                     <Controls
                       isSimulating={isSimulating}
+                      isPaused={isPaused}
                       simulationHasStarted={simulationHasStarted}
                       isLoadingSummary={isLoadingSummary}
+                      isLoadingSummaryForContinue={isLoadingSummaryForContinue}
                       isLoadingAgentResponse={isLoadingAgentResponse}
                       onStopSimulation={handleStopSimulation}
+                      onPauseResumeSimulation={handlePauseResumeSimulation}
+                      onSummarizeAndContinue={handleSummarizeAndContinue}
                       onTranscription={handleTranscription}
+                      hasMessages={messages.length > 0}
                     />
                   )}
                   <OutputActions
                     summary={summary}
-                    isLoading={isLoadingSummary}
+                    isLoading={isLoadingSummary || isLoadingSummaryForContinue}
                     onGeneratePlan={handleGenerateImplementationPlan}
                     isGeneratingPlan={isLoadingImplementationPlan}
                     planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
@@ -247,7 +297,7 @@ export default function EvolvingEchoPage() {
               </Tabs>
             </SidebarContent>
             <SidebarFooter className="p-4 mt-auto border-t">
-              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.4</p>
+              <p className="text-xs text-muted-foreground text-center">Evolving Echo v1.5</p>
             </SidebarFooter>
           </Sidebar>
 
@@ -267,3 +317,5 @@ export default function EvolvingEchoPage() {
     </SidebarProvider>
   );
 }
+
+    

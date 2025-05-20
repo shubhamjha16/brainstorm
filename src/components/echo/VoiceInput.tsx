@@ -11,11 +11,12 @@ import { cn } from "@/lib/utils";
 interface VoiceInputProps {
   onTranscription: (text: string) => void;
   isSimulating: boolean;
-  simulationHasStarted: boolean; // Added prop
-  disabled?: boolean; // General disabled prop from parent (e.g., while agent is thinking or summary is loading)
+  isPaused: boolean; // Added prop
+  simulationHasStarted: boolean;
+  disabled?: boolean;
 }
 
-export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted, disabled }: VoiceInputProps) {
+export function VoiceInput({ onTranscription, isSimulating, isPaused, simulationHasStarted, disabled }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -23,6 +24,10 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
   const { toast } = useToast();
 
   const handleStartRecording = async () => {
+    if (!simulationHasStarted) {
+       toast({ title: "Not Active", description: "Start a simulation before using voice input.", variant: "default"});
+      return;
+    }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       toast({ title: "Error", description: "Voice recording is not supported by your browser.", variant: "destructive" });
       return;
@@ -38,7 +43,6 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
 
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        // Convert Blob to Data URI
         const reader = new FileReader();
         reader.onloadend = async () => {
           const audioDataUri = reader.result as string;
@@ -58,7 +62,7 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
           }
         };
         reader.readAsDataURL(audioBlob);
-        stream.getTracks().forEach(track => track.stop()); // Stop microphone access
+        stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorderRef.current.start();
@@ -76,13 +80,11 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
     }
   };
 
-  // Cleanup: stop recording and microphone if component unmounts or simulation stops
   useEffect(() => {
     return () => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
         mediaRecorderRef.current.stop();
       }
-      // Ensure microphone stream is released
       if (mediaRecorderRef.current?.stream) {
          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       }
@@ -90,16 +92,20 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
   }, []);
   
   useEffect(() => {
-    if (!isSimulating && isRecording) {
+    // If simulation stops or is paused (and not currently recording, to allow stopping), stop recording.
+    if ((!isSimulating && !isPaused && isRecording) || (isPaused && isRecording && !disabled)) { // disabled check to see if parent wants to allow stopping
+        // Let's simplify: if not simulating (and not paused for resume), or if explicitly disabled by parent while recording, stop.
+    }
+     if (isRecording && ((!isSimulating && !isPaused) || disabled)) {
       handleStopRecording();
     }
-  }, [isSimulating, isRecording]);
 
-  // Button should be disabled if:
-  // 1. Parent explicitly disables it (e.g. agent thinking, summary loading)
-  // 2. Simulation is not active (unless currently recording, to allow stopping)
-  // 3. Currently transcribing audio
-  const effectiveDisabled = disabled || (!isSimulating && !isRecording) || isTranscribing;
+  }, [isSimulating, isPaused, isRecording, disabled]);
+
+  const effectiveDisabled = disabled || 
+                           isTranscribing || 
+                           (!simulationHasStarted && !isRecording) || // Can't start recording if sim hasn't started
+                           (!isSimulating && !isPaused && !isRecording); // If stopped & not recording, disable. If paused, enable.
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -109,7 +115,7 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
         size="lg"
         className={cn("w-full transition-all duration-300", isRecording && "ring-2 ring-destructive ring-offset-2")}
         aria-label={isRecording ? "Stop recording" : "Start recording"}
-        disabled={effectiveDisabled}
+        disabled={effectiveDisabled && !isRecording } // Allow stopping recording even if other conditions make starting disabled
       >
         {isTranscribing ? (
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -121,9 +127,14 @@ export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted
         {isTranscribing ? "Transcribing..." : isRecording ? "Stop Recording" : "Add Voice Input"}
       </Button>
       {isRecording && <p className="text-sm text-muted-foreground animate-pulse">Recording in progress...</p>}
-      {!isSimulating && simulationHasStarted && !isRecording && (
-         <p className="text-xs text-muted-foreground">Simulation paused. Resume by stopping or through other controls.</p>
+      {!isSimulating && simulationHasStarted && !isRecording && !isPaused && (
+         <p className="text-xs text-muted-foreground text-center">Simulation stopped. Start a new simulation or resume if paused.</p>
+      )}
+       {isPaused && !isRecording && (
+         <p className="text-xs text-muted-foreground text-center">Simulation paused. Press Resume or use Voice Input.</p>
       )}
     </div>
   );
 }
+
+    

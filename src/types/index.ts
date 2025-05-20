@@ -32,3 +32,9 @@ export interface ImplementationPlanData {
   feasibilityAssessment: string;
   refinedStrategy: string;
 }
+
+export interface MarketingPostData {
+  imageUri: string;
+  caption: string;
+  imageKeywords: string; // Keywords used for image generation or as a hint
+}

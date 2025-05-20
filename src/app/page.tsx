@@ -2,18 +2,20 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import type { Agent, ChatMessageData, SummaryData, ImplementationPlanData } from "@/types";
+import type { Agent, ChatMessageData, SummaryData, ImplementationPlanData, MarketingPostData } from "@/types";
 import { Header } from "@/components/echo/Header";
 import { InitialIdeaForm } from "@/components/echo/InitialIdeaForm";
 import { ChatInterface } from "@/components/echo/ChatInterface";
 import { Controls } from "@/components/echo/Controls";
 import { OutputActions } from "@/components/echo/OutputActions";
 import { ImplementationPlan } from "@/components/echo/ImplementationPlan";
+import { MarketingTab } from "@/components/echo/MarketingTab"; // Import new component
 import { summarizeDiscussion } from "@/ai/flows/summarize-discussion";
 import { refineIdea } from "@/ai/flows/refine-idea-flow";
 import { generateImplementationPlan } from "@/ai/flows/generate-implementation-plan";
+// import { generateInstagramPost } from "@/ai/flows/generate-instagram-post-flow"; // Not called directly from here
 import { useToast } from "@/hooks/use-toast";
-import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, PanelLeftClose, PanelRightOpen } from "lucide-react";
+import { Bot, Brain, Users, BrainCircuit, MessageSquareHeart, Scale, PanelLeftClose, PanelRightOpen, Wand2 } from "lucide-react";
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, useSidebar } from "@/components/ui/sidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -38,13 +40,18 @@ function EvolvingEchoPageContent() {
   const [simulationHasStarted, setSimulationHasStarted] = useState<boolean>(false);
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [implementationPlan, setImplementationPlan] = useState<ImplementationPlanData | null>(null);
+  // Marketing state removed from here, will be managed within MarketingTab.tsx for now
+  // If global state for marketing post is needed later, it can be added back.
+  // const [marketingPost, setMarketingPost] = useState<MarketingPostData | null>(null);
+
   const [isStartingSimulation, setIsStartingSimulation] = useState<boolean>(false);
-  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false); // For final summary
+  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [isLoadingAgentResponse, setIsLoadingAgentResponse] = useState<boolean>(false);
   const [isLoadingImplementationPlan, setIsLoadingImplementationPlan] = useState<boolean>(false);
+  // const [isLoadingMarketingPost, setIsLoadingMarketingPost] = useState<boolean>(false); // Managed in MarketingTab
   const [activeTab, setActiveTab] = useState<string>("controlsOutput");
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [isLoadingSummaryForContinue, setIsLoadingSummaryForContinue] = useState<boolean>(false); // For interim summary
+  const [isLoadingSummaryForContinue, setIsLoadingSummaryForContinue] = useState<boolean>(false);
 
   const currentAgentIndexRef = useRef<number>(0);
   const simulationLoopRef = useRef<NodeJS.Timeout | null>(null);
@@ -101,10 +108,11 @@ function EvolvingEchoPageContent() {
     setIsPaused(false);
     setSummary(null);
     setImplementationPlan(null);
+    // setMarketingPost(null); // Clear marketing post if any
     currentAgentIndexRef.current = 0;
     isNextTurnVoiceSteeredRef.current = false;
     setIsStartingSimulation(false);
-    setActiveTab("controlsOutput");
+    setActiveTab("controlsOutput"); // Default to controls tab
   };
 
   const handlePauseResumeSimulation = () => {
@@ -120,7 +128,7 @@ function EvolvingEchoPageContent() {
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
-      setSummary(result); // Update the main summary state
+      setSummary(result);
       toast({ title: "Interim Summary Generated", description: "The discussion has been summarized. Evolution continues." });
     } catch (error) {
       console.error("Interim summarization error:", error);
@@ -133,7 +141,7 @@ function EvolvingEchoPageContent() {
 
   const handleStopSimulation = useCallback(async () => {
     setIsSimulating(false);
-    setIsPaused(false); // Ensure simulation is not paused when stopped
+    setIsPaused(false);
     if (simulationLoopRef.current) {
       clearTimeout(simulationLoopRef.current);
     }
@@ -142,7 +150,8 @@ function EvolvingEchoPageContent() {
       return;
     }
     setIsLoadingSummary(true);
-    setImplementationPlan(null);
+    setImplementationPlan(null); // Clear plan when stopping for new summary
+    // setMarketingPost(null); // Clear marketing post
     try {
       const discussionText = messages.filter(msg => !msg.isLoading).map(msg => `${msg.sender}: ${msg.text}`).join("\n\n");
       const result = await summarizeDiscussion({ discussionText });
@@ -166,7 +175,7 @@ function EvolvingEchoPageContent() {
 
     const isUserDirected = isNextTurnVoiceSteeredRef.current;
     if (isUserDirected) {
-      isNextTurnVoiceSteeredRef.current = false; // Reset for subsequent turns
+      isNextTurnVoiceSteeredRef.current = false;
     }
 
     try {
@@ -222,12 +231,10 @@ function EvolvingEchoPageContent() {
 
     addMessage(`Voice Input: ${text}`, "User", undefined, true);
     setCurrentIdea(text);
-    isNextTurnVoiceSteeredRef.current = true; // Mark that the next agent turn is voice-steered
+    isNextTurnVoiceSteeredRef.current = true;
 
     if (isPaused) {
       setIsPaused(false); 
-    } else if (isSimulating) {
-       // Handled by useEffect
     }
   };
 
@@ -253,17 +260,16 @@ function EvolvingEchoPageContent() {
     }
   }, [toast]);
 
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar side="left" variant="sidebar" collapsible="icon" className="border-r">
-          {/* Removed SidebarRail */}
           <SidebarHeader className="p-4 flex items-center justify-between group-data-[state=collapsed]:group-data-[collapsible=icon]:p-2 group-data-[state=collapsed]:group-data-[collapsible=icon]:justify-center">
              <h2 className={cn(
                 "text-xl font-semibold text-primary",
-                sidebarState === 'collapsed' && sidebarOpen === false && 'hidden' // Hide "Tools" when truly collapsed
+                sidebarState === 'collapsed' && sidebarOpen === false && 'hidden', 
+                'group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden' 
              )}>
                Tools
              </h2>
@@ -276,12 +282,14 @@ function EvolvingEchoPageContent() {
                 <span className="sr-only">Toggle Sidebar</span>
             </Button>
           </SidebarHeader>
-          <SidebarContent className="p-0">
+          <SidebarContent className="p-0 flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-2 rounded-none border-b sticky top-0 bg-sidebar z-10 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
+              <TabsList className="grid w-full grid-cols-3 rounded-none border-b sticky top-0 bg-sidebar z-10 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                 <TabsTrigger value="controlsOutput">Controls &amp; Summary</TabsTrigger>
                 <TabsTrigger value="plan" disabled={!implementationPlan && !isLoadingImplementationPlan && !summary}>Plan</TabsTrigger>
+                <TabsTrigger value="marketing" disabled={!summary}>Marketing</TabsTrigger>
               </TabsList>
+              
               <TabsContent value="controlsOutput" className="flex-1 overflow-y-auto p-4 space-y-6 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                 {simulationHasStarted && (
                   <Controls
@@ -306,19 +314,24 @@ function EvolvingEchoPageContent() {
                   planIsAvailable={!!implementationPlan || isLoadingImplementationPlan}
                 />
               </TabsContent>
+              
               <TabsContent value="plan" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
                 <ImplementationPlan
                   plan={implementationPlan}
                   isLoading={isLoadingImplementationPlan && !implementationPlan}
                 />
               </TabsContent>
+
+              <TabsContent value="marketing" className="flex-1 overflow-y-auto p-4 group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
+                <MarketingTab summary={summary} />
+              </TabsContent>
             </Tabs>
           </SidebarContent>
           <SidebarFooter className="p-4 mt-auto border-t group-data-[state=collapsed]:group-data-[collapsible=icon]:hidden">
-            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.6</p>
+            <p className="text-xs text-muted-foreground text-center">Brainstorm v1.7</p> {/* Version Bump */}
           </SidebarFooter>
            <SidebarFooter className="p-2 mt-auto border-t hidden group-data-[state=collapsed]:group-data-[collapsible=icon]:block">
-            <p className="text-xs text-muted-foreground text-center">v1.6</p>
+            <p className="text-xs text-muted-foreground text-center">v1.7</p>
           </SidebarFooter>
         </Sidebar>
 
@@ -340,10 +353,9 @@ function EvolvingEchoPageContent() {
 
 export default function EvolvingEchoPage() {
   return (
-    <SidebarProvider defaultOpen={true}> {/* Set defaultOpen to false if you want it initially collapsed */}
+    <SidebarProvider defaultOpen={true}>
       <EvolvingEchoPageContent />
     </SidebarProvider>
   );
 }
 
-    

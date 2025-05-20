@@ -193,6 +193,7 @@ export default function EvolvingEchoPage() {
               {simulationHasStarted && (
                 <Controls
                   isSimulating={isSimulating}
+                  simulationHasStarted={simulationHasStarted}
                   isLoadingSummary={isLoadingSummary}
                   isLoadingAgentResponse={isLoadingAgentResponse}
                   onStopSimulation={handleStopSimulation}

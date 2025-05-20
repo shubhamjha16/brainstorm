@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ControlsProps {
   isSimulating: boolean;
+  simulationHasStarted: boolean; // Added prop
   isLoadingSummary: boolean;
   isLoadingAgentResponse: boolean;
   onStopSimulation: () => void;
@@ -16,6 +17,7 @@ interface ControlsProps {
 
 export function Controls({ 
   isSimulating, 
+  simulationHasStarted,
   isLoadingSummary, 
   isLoadingAgentResponse, 
   onStopSimulation, 
@@ -32,7 +34,8 @@ export function Controls({
       <CardContent className="space-y-4">
         <VoiceInput 
           onTranscription={onTranscription} 
-          isSimulating={isSimulating} 
+          isSimulating={isSimulating}
+          simulationHasStarted={simulationHasStarted} 
           disabled={voiceInputDisabled} 
         />
         <Button

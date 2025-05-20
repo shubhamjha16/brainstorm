@@ -11,10 +11,11 @@ import { cn } from "@/lib/utils";
 interface VoiceInputProps {
   onTranscription: (text: string) => void;
   isSimulating: boolean;
+  simulationHasStarted: boolean; // Added prop
   disabled?: boolean; // General disabled prop from parent (e.g., while agent is thinking or summary is loading)
 }
 
-export function VoiceInput({ onTranscription, isSimulating, disabled }: VoiceInputProps) {
+export function VoiceInput({ onTranscription, isSimulating, simulationHasStarted, disabled }: VoiceInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
